@@ -10,27 +10,33 @@ public sealed class Player {
   public Vector2 mForce = Vector2.zero;
 
   // -- constants --
-  private static readonly float mGravity = 1.0f;
-  private static readonly float mJump = 5.0f;
-  private static readonly float mDrift = 2.0f;
+  public const float kGravity = 1.0f;
+  private const float kJump = 5.0f;
+  private const float kWalk = 3.0f;
+  private const float kDrift = 2.0f;
 
   // -- state-machine --
   private State mState;
 
-  // -- lifetime --
-  public Player() {
-    mState = new State(State.Type.Idling);
+  // -- events --
+  public void OnStart(bool isAirborne) {
+    var state = isAirborne ? State.Type.Airborne : State.Type.Idling;
+    mState = new State(state);
   }
 
-  // -- events --
-  public void OnJumpDown(float xAxis) {
-    if (!mState.Includes(State.Type.Jumping)) {
+  public void OnJumpDown() {
+    if (!mState.Includes(State.Type.Airborne)) {
       Jump();
     }
+  }
 
-    if (mState.Includes(State.Type.Jumping)) {
-      Debug.Log("x: " + xAxis);
+  public void OnDefault(float xAxis) {
+    if (xAxis == 0.0f) {
+      return;
+    } else if (mState.Includes(State.Type.Airborne)) {
       JumpDrift(xAxis);
+    } else {
+      Move(xAxis);
     }
   }
 
@@ -42,18 +48,27 @@ public sealed class Player {
     mVelocity = new Vector2(v.x, v.y);
 
     // detect state changes
-    if (mVelocity.y < 0.0f && mState.Is(State.Type.Jumping)) {
+    if (mVelocity.y < 0.0f && mState.Is(State.Type.Airborne)) {
       JoinState(State.Type.Falling);
     }
   }
 
-  public void Jump() {
-    SwitchState(State.Type.Jumping);
-    mVelocity = mVelocity.WithY(mJump);
+  void Move(float xAxis) {
+    // TODO: should SwitchState ignore duplicate states, and also, what is a duplicate?
+    if (!mState.Is(State.Type.Walking)) {
+      SwitchState(State.Type.Walking);
+    }
+
+    mVelocity = new Vector2(xAxis * kWalk, 0.0f);
   }
 
-  public void JumpDrift(float xAxis) {
-    mForce.x += xAxis < 0.0f ? -mDrift : mDrift;
+  void Jump() {
+    SwitchState(State.Type.Airborne);
+    mVelocity = mVelocity.WithY(kJump);
+  }
+
+  void JumpDrift(float xAxis) {
+    mForce.x += xAxis * kDrift;
   }
 
   public void Land() {
@@ -74,15 +89,6 @@ public sealed class Player {
     mState.Join(type);
   }
 
-  // -- queries --
-  public Vector2 Velocity() {
-    return mVelocity;
-  }
-
-  public float Gravity() {
-    return mGravity;
-  }
-
   // -- state --
   sealed class State: IEnumerable<State>, IEquatable<State.Type> {
     // -- state/properties
@@ -92,11 +98,11 @@ public sealed class Player {
 
     // -- state/types
     public enum Type {
-      Idling = 1 << 0,
-      Jumping = 1 << 1,
-      Falling = 1 << 2,
+      Idling,
+      Walking,
+      Airborne,
+      Falling,
     }
-
 
     // -- state/lifetime
     public State(Type type) {

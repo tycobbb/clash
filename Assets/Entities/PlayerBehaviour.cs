@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class PlayerBehaviour: MonoBehaviour {
@@ -14,7 +15,12 @@ public sealed class PlayerBehaviour: MonoBehaviour {
   }
 
   void Start() {
-    Body().gravityScale = mPlayer.Gravity();
+    // set initial state
+    var nContacts = Body().GetContacts(new Collider2D[0]);
+    mPlayer.OnStart(nContacts == 0);
+
+    // sync constants
+    Body().gravityScale = Player.kGravity;
   }
 
   void FixedUpdate() {
@@ -23,10 +29,12 @@ public sealed class PlayerBehaviour: MonoBehaviour {
     // sync state pre-update
     mPlayer.Sync(body.velocity);
 
-    // run commands
+    // fire events
     if (mControls.IsJumpDown()) {
-      mPlayer.OnJumpDown(mControls.LeftStickX());
+      mPlayer.OnJumpDown();
     }
+
+    mPlayer.OnDefault(mControls.LeftStickX());
 
     // update state
     var newV = mPlayer.mVelocity;

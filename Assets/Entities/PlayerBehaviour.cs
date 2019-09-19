@@ -27,16 +27,16 @@ public sealed class PlayerBehaviour: MonoBehaviour {
     var body = Body();
 
     // sync state pre-update
-    mPlayer.Sync(body.velocity);
+    mPlayer.OnPreUpdate(body.velocity);
 
-    // fire events
+    // run update
     if (mControls.IsJumpDown()) {
       mPlayer.OnJumpDown();
     }
 
-    mPlayer.OnDefault(mControls.LeftStickX());
+    // run simulation
+    mPlayer.OnPreSimulation(mControls.LeftStickX());
 
-    // update state
     var newV = mPlayer.mVelocity;
     if (!body.velocity.Equals(newV)) {
       body.velocity = newV;
@@ -45,6 +45,14 @@ public sealed class PlayerBehaviour: MonoBehaviour {
     var newF = mPlayer.mForce;
     if (!newF.Equals(Vector2.zero)) {
       body.AddForce(newF, ForceMode2D.Impulse);
+    }
+
+    // run post-simulation
+    mPlayer.OnPostSimulation(body.velocity);
+
+    newV = mPlayer.mVelocity;
+    if (!body.velocity.Equals(newV)) {
+      body.velocity = newV;
     }
   }
 

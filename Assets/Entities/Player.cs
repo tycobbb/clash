@@ -13,7 +13,8 @@ public sealed class Player {
   public const float kGravity = 1.0f;
   private const float kJump = 5.0f;
   private const float kWalk = 3.0f;
-  private const float kDrift = 2.0f;
+  private const float kDrift = 0.5f;
+  private const float kMaxAirSpeed = 3.0f;
 
   // -- state-machine --
   private State mState;
@@ -24,13 +25,26 @@ public sealed class Player {
     mState = new State(state);
   }
 
+  public void OnPreUpdate(Vector2 v) {
+    mState.AdvanceFrame();
+
+    // sync data
+    mForce = Vector2.zero;
+    mVelocity = new Vector2(v.x, v.y);
+
+    // check state changes
+    if (mVelocity.y < 0.0f && mState.Is(State.Type.Airborne)) {
+      JoinState(State.Type.Falling);
+    }
+  }
+
   public void OnJumpDown() {
     if (!mState.Includes(State.Type.Airborne)) {
       Jump();
     }
   }
 
-  public void OnDefault(float xAxis) {
+  public void OnPreSimulation(float xAxis) {
     if (xAxis == 0.0f) {
       return;
     } else if (mState.Includes(State.Type.Airborne)) {
@@ -40,19 +54,15 @@ public sealed class Player {
     }
   }
 
-  // -- commands --
-  public void Sync(Vector2 v) {
-    // sync body data
-    mState.AdvanceFrame();
-    mForce = Vector2.zero;
-    mVelocity = new Vector2(v.x, v.y);
+  public void OnPostSimulation(Vector2 v) {
+    mVelocity = v;
 
-    // detect state changes
-    if (mVelocity.y < 0.0f && mState.Is(State.Type.Airborne)) {
-      JoinState(State.Type.Falling);
+    if (mState.Includes(State.Type.Airborne)) {
+      LimitAirSpeed();
     }
   }
 
+  // -- commands --
   void Move(float xAxis) {
     // TODO: should SwitchState ignore duplicate states, and also, what is a duplicate?
     if (!mState.Is(State.Type.Walking)) {
@@ -77,6 +87,11 @@ public sealed class Player {
     }
 
     SwitchState(State.Type.Idling);
+  }
+
+  void LimitAirSpeed() {
+    var v = mVelocity;
+    mVelocity = new Vector2(Math.Min(Math.Max(v.x, -kMaxAirSpeed), kMaxAirSpeed), v.y);
   }
 
   private void SwitchState(State.Type type) {

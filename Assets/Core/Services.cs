@@ -1,13 +1,13 @@
 public sealed class Services {
   // -- services --
-  private IControls mControls;
+  private Input.IMutableStream mInputs;
 
-  public IControls Controls() {
-    if (mControls == null) {
-      mControls = new Controls();
+  public Input.IMutableStream Inputs() {
+    if (mInputs == null) {
+      mInputs = new Input.Stream();
     }
 
-    return mControls;
+    return mInputs;
   }
 
   // -- singleton (TODO: inject this) --

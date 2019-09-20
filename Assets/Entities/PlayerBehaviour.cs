@@ -1,17 +1,14 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public sealed class PlayerBehaviour: MonoBehaviour {
   // -- dependencies --
   private Player mPlayer;
-  private IControls mControls;
-
-  // -- physics --
+  private Input.IMutableStream mInputs;
 
   // -- lifecycle --
   void Awake() {
-    mControls = Services.Root.Controls();
     mPlayer = new Player();
+    mInputs = Services.Root.Inputs();
   }
 
   void Start() {
@@ -28,7 +25,7 @@ public sealed class PlayerBehaviour: MonoBehaviour {
 
     // sync body to entity and run update
     mPlayer.OnPreUpdate(body.velocity);
-    mPlayer.OnUpdate(mControls);
+    mPlayer.OnUpdate(mInputs);
 
     // sync entity back to body
     var newV = mPlayer.mVelocity;
@@ -50,7 +47,7 @@ public sealed class PlayerBehaviour: MonoBehaviour {
     }
   }
 
-  void OnCollisionEnter2D(Collision2D other) {
+  void OnCollisionEnter2D(Collision2D _) {
     // TODO: land conditionally, not on every collision
     mPlayer.Land();
   }

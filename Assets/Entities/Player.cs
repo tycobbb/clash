@@ -2,21 +2,22 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
+using U = UnityEngine;
 
 public sealed class Player {
   // -- core --
-  public Vector2 mVelocity = Vector2.zero;
-  public Vector2 mForce = Vector2.zero;
+  public U.Vector2 mVelocity = U.Vector2.zero;
+  public U.Vector2 mForce = U.Vector2.zero;
 
   // -- constants --
   public const float kGravity = 1.0f;
   private const int kJumpWaitFrames = 8;
   private const float kJump = 5.0f;
   private const float kJumpShort = 3.0f;
+  private const float kFastFall = 6.0f;
   private const float kWalk = 3.0f;
   private const float kDrift = 0.2f;
-  private const float kMaxAirSpeed = 3.0f;
+  private const float kMaxAirSpeedX = 3.0f;
 
   // -- state-machine --
   private State mState;
@@ -27,75 +28,100 @@ public sealed class Player {
     mState = new State(state);
   }
 
-  public void OnPreUpdate(Vector2 v) {
+  public void OnPreUpdate(U.Vector2 v) {
     mState.AdvanceFrame();
 
     // sync body data
-    mForce = Vector2.zero;
-    mVelocity = new Vector2(v.x, v.y);
+    mForce = U.Vector2.zero;
+    mVelocity = new U.Vector2(v.x, v.y);
   }
 
-  public void OnUpdate(IControls controls) {
-    // check state changes
-    if (mVelocity.y < 0.0f && mState.Is(State.Type.Airborne)) {
-      JoinState(State.Type.Falling);
+  public void OnUpdate(Input.IStream inputs) {
+    var input = inputs.GetCurrent();
+
+    // check for physiscs-based state changes
+    if (mVelocity.y <= 0.0f && mState.Is(State.Type.Airborne)) {
+      Fall();
     }
 
-    // handle button input
-    if (controls.GetJumpDown()) {
+    // handle button inputs
+    if (input.mJumpA.IsDown()) {
       OnFullJumpDown();
-    } else if (controls.GetJump2Down()) {
+    } else if (input.mJumpB.IsDown()) {
       OnShortJumpDown();
     }
 
     // tick through any state changes
-    if (mState.Includes(State.kJumpStart)) {
-      OnJumpWait(controls.GetJump());
+    if (mState.Any(State.kJumpStart)) {
+      OnJumpWait(inputs);
     }
 
-    // apply horizontal movement
-    OnMoveX(controls.GetMoveX());
+    // handle analog stick movement
+    OnMoveX(inputs);
+    OnMoveY(inputs);
   }
 
+  // -- events/jump
   void OnFullJumpDown() {
-    if (!mState.Includes(State.kProhibitsJump1)) {
+    if (!mState.Any(State.kProhibitsJump1)) {
       StartFullJump();
     }
   }
 
   void OnShortJumpDown() {
-    if (!mState.Includes(State.kProhibitsJump1)) {
+    if (!mState.Any(State.kProhibitsJump1)) {
       StartShortJump();
     }
   }
 
-  void OnJumpWait(bool isJumpDown) {
+  void OnJumpWait(Input.IStream inputs) {
+    var input = inputs.GetCurrent();
+
     // switch to short jump if jump is released within frame window
-    if (mState.mType == State.Type.Jump1fWait && !isJumpDown) {
+    if (mState.mType == State.Type.Jump1fWait && !input.mJumpA.IsActive()) {
       ReplaceState(State.Type.Jump1sWait);
     }
 
+    // jump when frame window elapses
     if (mState.mFrame >= kJumpWaitFrames) {
       Jump();
     }
   }
 
-  void OnMoveX(float mag) {
+  // -- events/move
+  void OnMoveX(Input.IStream inputs) {
+    var stick = inputs.GetCurrent().mMove;
+
+    var mag = stick.mPosition.x;
     if (mag == 0.0f) {
       return;
     }
 
-    if (mState.Includes(State.Type.Airborne)) {
+    if (mState.Any(State.Type.Airborne)) {
       Drift(mag);
-    } else if (!mState.Includes(State.Type.Jump1fWait | State.Type.Jump1sWait)) {
+    } else if (!mState.Any(State.Type.Jump1fWait | State.Type.Jump1sWait)) {
       Move(mag);
     }
   }
 
-  public void OnPostSimulation(Vector2 v) {
+  void OnMoveY(Input.IStream inputs) {
+    var stick = inputs.GetCurrent().mMove;
+
+    var mag = stick.mPosition.y;
+    if (mag == 0.0f) {
+      return;
+    }
+
+    if (mState.Any(State.Type.Falling) && stick.IsDown() && stick.DidSwitch()) {
+      U.Debug.Log("Fast fall!");
+      FastFall();
+    }
+  }
+
+  public void OnPostSimulation(U.Vector2 v) {
     mVelocity = v;
 
-    if (mState.Includes(State.Type.Airborne)) {
+    if (mState.Any(State.Type.Airborne)) {
       LimitAirSpeed();
     }
   }
@@ -107,7 +133,7 @@ public sealed class Player {
       SwitchState(State.Type.Walking);
     }
 
-    mVelocity = new Vector2(xMove * kWalk, 0.0f);
+    mVelocity = new U.Vector2(xMove * kWalk, 0.0f);
   }
 
   void StartFullJump() {
@@ -128,8 +154,16 @@ public sealed class Player {
     mForce.x += xMov * kDrift;
   }
 
+  void Fall() {
+    JoinState(State.Type.Falling);
+  }
+
+  void FastFall() {
+    mVelocity = mVelocity.WithY(-kFastFall);
+  }
+
   public void Land() {
-    if (!mState.Includes(State.Type.Falling)) {
+    if (!mState.Any(State.Type.Falling)) {
       return;
     }
 
@@ -138,21 +172,21 @@ public sealed class Player {
 
   void LimitAirSpeed() {
     var v = mVelocity;
-    mVelocity = new Vector2(Math.Min(Math.Max(v.x, -kMaxAirSpeed), kMaxAirSpeed), v.y);
+    mVelocity = new U.Vector2(U.Mathf.Clamp(v.x, -kMaxAirSpeedX, kMaxAirSpeedX), v.y);
   }
 
   private void SwitchState(State.Type type) {
-    Debug.Log("[Player] state Switch: " + type);
+    U.Debug.Log("[Player] State Switch: " + type);
     mState = new State(type);
   }
 
   private void ReplaceState(State.Type type) {
-    Debug.Log("[Player] state Replace: " + type);
+    U.Debug.Log("[Player] State Replace: " + type);
     mState.Replace(type);
   }
 
   private void JoinState(State.Type type) {
-    Debug.Log("[Player] state Join: " + type);
+    U.Debug.Log("[Player] State Join: " + type);
     mState.Join(type);
   }
 
@@ -201,11 +235,15 @@ public sealed class Player {
     }
 
     // -- state/queries
+    public State Find(Type type) {
+      return this.First((s) => (s.mType & type) != 0);
+    }
+
     public bool Is(Type type) {
       return this.All((s) => (s.mType & type) != 0);
     }
 
-    public bool Includes(Type type) {
+    public bool Any(Type type) {
       return this.Any((s) => (s.mType & type) != 0);
     }
 

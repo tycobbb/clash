@@ -5,16 +5,18 @@ public class Game: MonoBehaviour {
   private readonly bool mDevMode = true;
 
   // -- dependencies --
+  private Input.IMutableStream mInputs;
   private EntityRepo mEntities;
 
   // -- lifecycle --
   void Awake() {
     mEntities = new EntityRepo();
+    mInputs = Services.Root.Inputs();
   }
 
   void Start() {
     if (mDevMode) {
-      Debug.Log("[Game] dev mode enabled");
+      Debug.Log("[Game] Dev Mode Enabled!");
 
       var visible = mEntities.FindVisible();
       foreach (var entity in visible) {
@@ -22,6 +24,10 @@ public class Game: MonoBehaviour {
         renderer.material = GetDebugMaterial();
       }
     }
+  }
+
+  void FixedUpdate() {
+    mInputs.OnUpdate();
   }
 
   // -- queries --

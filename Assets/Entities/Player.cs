@@ -33,38 +33,50 @@ public sealed class Player {
     // sync body data
     mForce = Vector2.zero;
     mVelocity = new Vector2(v.x, v.y);
+  }
 
+  public void OnUpdate(IControls controls) {
     // check state changes
     if (mVelocity.y < 0.0f && mState.Is(State.Type.Airborne)) {
       JoinState(State.Type.Falling);
     }
-  }
 
-  public void OnUpdate(IControls controls) {
     // handle button input
     if (controls.GetJumpDown()) {
-      OnJumpDown();
+      OnFullJumpDown();
+    } else if (controls.GetJump2Down()) {
+      OnShortJumpDown();
     }
 
     // tick through any state changes
-    switch (mState.mType) {
-      case State.Type.JumpWait:
-        OnJumpWait(controls.GetJump()); break;
+    if (mState.Includes(State.kJumpStart)) {
+      OnJumpWait(controls.GetJump());
     }
 
     // apply horizontal movement
     OnMoveX(controls.GetMoveX());
   }
 
-  void OnJumpDown() {
-    if (!mState.Includes(State.Type.Airborne)) {
-      StartJump();
+  void OnFullJumpDown() {
+    if (!mState.Includes(State.kProhibitsJump1)) {
+      StartFullJump();
+    }
+  }
+
+  void OnShortJumpDown() {
+    if (!mState.Includes(State.kProhibitsJump1)) {
+      StartShortJump();
     }
   }
 
   void OnJumpWait(bool isJumpDown) {
+    // switch to short jump if jump is released within frame window
+    if (mState.mType == State.Type.Jump1fWait && !isJumpDown) {
+      ReplaceState(State.Type.Jump1sWait);
+    }
+
     if (mState.mFrame >= kJumpWaitFrames) {
-      Jump(!isJumpDown);
+      Jump();
     }
   }
 
@@ -75,7 +87,7 @@ public sealed class Player {
 
     if (mState.Includes(State.Type.Airborne)) {
       Drift(mag);
-    } else if (!mState.Includes(State.Type.JumpWait)) {
+    } else if (!mState.Includes(State.Type.Jump1fWait | State.Type.Jump1sWait)) {
       Move(mag);
     }
   }
@@ -98,12 +110,16 @@ public sealed class Player {
     mVelocity = new Vector2(xMove * kWalk, 0.0f);
   }
 
-  void StartJump() {
-    SwitchState(State.Type.JumpWait);
-    mVelocity = mVelocity.WithY(kJump);
+  void StartFullJump() {
+    SwitchState(State.Type.Jump1fWait);
   }
 
-  void Jump(bool isShort) {
+  void StartShortJump() {
+    SwitchState(State.Type.Jump1sWait);
+  }
+
+  void Jump() {
+    var isShort = mState.mType == State.Type.Jump1sWait;
     SwitchState(State.Type.Airborne);
     mVelocity = mVelocity.WithY(isShort ? kJumpShort : kJump);
   }
@@ -130,6 +146,11 @@ public sealed class Player {
     mState = new State(type);
   }
 
+  private void ReplaceState(State.Type type) {
+    Debug.Log("[Player] state Replace: " + type);
+    mState.Replace(type);
+  }
+
   private void JoinState(State.Type type) {
     Debug.Log("[Player] state Join: " + type);
     mState.Join(type);
@@ -144,12 +165,21 @@ public sealed class Player {
 
     // -- state/types
     public enum Type {
-      Idling,
-      Walking,
-      JumpWait,
-      Airborne,
-      Falling,
+      Idling = 1 << 0,
+      Walking = 1 << 1,
+      Jump1fWait = 1 << 2,
+      Jump1sWait = 1 << 3,
+      Airborne = 1 << 4,
+      Falling = 1 << 5
     }
+
+    public const Type kJumpStart = 0
+      | Type.Jump1fWait
+      | Type.Jump1sWait;
+
+    public const Type kProhibitsJump1 = 0
+      | kJumpStart
+      | Type.Airborne;
 
     // -- state/lifetime
     public State(Type type) {
@@ -162,17 +192,21 @@ public sealed class Player {
       mFrame++;
     }
 
+    public void Replace(Type type) {
+      mType = type;
+    }
+
     public void Join(Type type) {
       this.Last().mNext = new State(type);
     }
 
     // -- state/queries
     public bool Is(Type type) {
-      return this.All((s) => s.mType == type);
+      return this.All((s) => (s.mType & type) != 0);
     }
 
     public bool Includes(Type type) {
-      return this.Any((s) => s.mType == type);
+      return this.Any((s) => (s.mType & type) != 0);
     }
 
     // -- state/IEnumerable

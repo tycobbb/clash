@@ -4,6 +4,7 @@ public interface IControls {
   float GetMoveX();
   bool GetJump();
   bool GetJumpDown();
+  bool GetJump2Down();
 }
 
 public sealed class Controls: IControls {
@@ -17,5 +18,9 @@ public sealed class Controls: IControls {
 
   public bool GetJumpDown() {
     return Input.GetButtonDown("Jump");
+  }
+
+  public bool GetJump2Down() {
+    return Input.GetButtonDown("Jump2");
   }
 }

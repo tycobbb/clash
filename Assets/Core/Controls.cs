@@ -1,12 +1,21 @@
 using UnityEngine;
 
-public sealed class Controls {
-  // -- queries --
-  public bool IsJumpDown() {
-    return Input.GetButtonDown("Jump");
+public interface IControls {
+  float GetMoveX();
+  bool GetJump();
+  bool GetJumpDown();
+}
+
+public sealed class Controls: IControls {
+  public float GetMoveX() {
+    return Input.GetAxis("MoveX");
   }
 
-  public float LeftStickX() {
-    return Input.GetAxis("LeftStickX");
+  public bool GetJump() {
+    return Input.GetButton("Jump");
+  }
+
+  public bool GetJumpDown() {
+    return Input.GetButtonDown("Jump");
   }
 }

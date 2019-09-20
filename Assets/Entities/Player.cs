@@ -11,9 +11,11 @@ public sealed class Player {
 
   // -- constants --
   public const float kGravity = 1.0f;
+  private const int kJumpWaitFrames = 8;
   private const float kJump = 5.0f;
+  private const float kJumpShort = 3.0f;
   private const float kWalk = 3.0f;
-  private const float kDrift = 0.5f;
+  private const float kDrift = 0.2f;
   private const float kMaxAirSpeed = 3.0f;
 
   // -- state-machine --
@@ -28,7 +30,7 @@ public sealed class Player {
   public void OnPreUpdate(Vector2 v) {
     mState.AdvanceFrame();
 
-    // sync data
+    // sync body data
     mForce = Vector2.zero;
     mVelocity = new Vector2(v.x, v.y);
 
@@ -38,19 +40,43 @@ public sealed class Player {
     }
   }
 
-  public void OnJumpDown() {
+  public void OnUpdate(IControls controls) {
+    // handle button input
+    if (controls.GetJumpDown()) {
+      OnJumpDown();
+    }
+
+    // tick through any state changes
+    switch (mState.mType) {
+      case State.Type.JumpWait:
+        OnJumpWait(controls.GetJump()); break;
+    }
+
+    // apply horizontal movement
+    OnMoveX(controls.GetMoveX());
+  }
+
+  void OnJumpDown() {
     if (!mState.Includes(State.Type.Airborne)) {
-      Jump();
+      StartJump();
     }
   }
 
-  public void OnPreSimulation(float xAxis) {
-    if (xAxis == 0.0f) {
+  void OnJumpWait(bool isJumpDown) {
+    if (mState.mFrame >= kJumpWaitFrames) {
+      Jump(!isJumpDown);
+    }
+  }
+
+  void OnMoveX(float mag) {
+    if (mag == 0.0f) {
       return;
-    } else if (mState.Includes(State.Type.Airborne)) {
-      JumpDrift(xAxis);
-    } else {
-      Move(xAxis);
+    }
+
+    if (mState.Includes(State.Type.Airborne)) {
+      Drift(mag);
+    } else if (!mState.Includes(State.Type.JumpWait)) {
+      Move(mag);
     }
   }
 
@@ -63,22 +89,27 @@ public sealed class Player {
   }
 
   // -- commands --
-  void Move(float xAxis) {
+  void Move(float xMove) {
     // TODO: should SwitchState ignore duplicate states, and also, what is a duplicate?
     if (!mState.Is(State.Type.Walking)) {
       SwitchState(State.Type.Walking);
     }
 
-    mVelocity = new Vector2(xAxis * kWalk, 0.0f);
+    mVelocity = new Vector2(xMove * kWalk, 0.0f);
   }
 
-  void Jump() {
-    SwitchState(State.Type.Airborne);
+  void StartJump() {
+    SwitchState(State.Type.JumpWait);
     mVelocity = mVelocity.WithY(kJump);
   }
 
-  void JumpDrift(float xAxis) {
-    mForce.x += xAxis * kDrift;
+  void Jump(bool isShort) {
+    SwitchState(State.Type.Airborne);
+    mVelocity = mVelocity.WithY(isShort ? kJumpShort : kJump);
+  }
+
+  void Drift(float xMov) {
+    mForce.x += xMov * kDrift;
   }
 
   public void Land() {
@@ -115,6 +146,7 @@ public sealed class Player {
     public enum Type {
       Idling,
       Walking,
+      JumpWait,
       Airborne,
       Falling,
     }

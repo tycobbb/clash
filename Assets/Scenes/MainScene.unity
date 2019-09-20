@@ -451,7 +451,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 1, y: 1.78}
   m_EdgeRadius: 0
 --- !u!23 &1825209448
 MeshRenderer:
@@ -498,7 +498,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1825209445}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!114 &1825209450
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -508,7 +508,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1825209445}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a003775e2c4bb44c19f7db82725b1359, type: 3}
+  m_Script: {fileID: 11500000, guid: 3a0c79490ca8340bf817d71d60e965ee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!50 &1825209451

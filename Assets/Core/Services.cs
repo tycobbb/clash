@@ -1,8 +1,8 @@
 public sealed class Services {
   // -- services --
-  private Controls mControls;
+  private IControls mControls;
 
-  public Controls Controls() {
+  public IControls Controls() {
     if (mControls == null) {
       mControls = new Controls();
     }

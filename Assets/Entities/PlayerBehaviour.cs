@@ -4,14 +4,14 @@ using UnityEngine;
 public sealed class PlayerBehaviour: MonoBehaviour {
   // -- dependencies --
   private Player mPlayer;
-  private Controls mControls;
+  private IControls mControls;
 
   // -- physics --
 
   // -- lifecycle --
   void Awake() {
-    mPlayer = new Player();
     mControls = Services.Root.Controls();
+    mPlayer = new Player();
   }
 
   void Start() {
@@ -26,17 +26,11 @@ public sealed class PlayerBehaviour: MonoBehaviour {
   void FixedUpdate() {
     var body = Body();
 
-    // sync state pre-update
+    // sync body to entity and run update
     mPlayer.OnPreUpdate(body.velocity);
+    mPlayer.OnUpdate(mControls);
 
-    // run update
-    if (mControls.IsJumpDown()) {
-      mPlayer.OnJumpDown();
-    }
-
-    // run simulation
-    mPlayer.OnPreSimulation(mControls.LeftStickX());
-
+    // sync entity back to body
     var newV = mPlayer.mVelocity;
     if (!body.velocity.Equals(newV)) {
       body.velocity = newV;

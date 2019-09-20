@@ -69,7 +69,7 @@ namespace Input {
       }
 
       if (state == Analog.State.Switch) {
-        Log.Debug("[Input.Stream] Switch Direction: " + direction);
+        Log.Verbose("[Input.Stream] Switch Direction: " + direction);
       }
 
       return new Analog(state, direction, position);

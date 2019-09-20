@@ -1,4 +1,5 @@
 using U = UnityEngine;
+using Input.Ext;
 
 namespace Input {
   public struct Analog {
@@ -15,11 +16,15 @@ namespace Input {
 
     // -- queries --
     public bool IsNeutral() {
-      return mDirection == Direction.Neutral;
+      return mDirection.IsNeutral();
     }
 
-    public bool IsDown() {
-      return mDirection == Direction.Down;
+    public bool IsLeft() {
+      return mDirection.IsLeft();
+    }
+
+    public bool IsRight() {
+      return mDirection.IsRight();
     }
 
     public bool DidSwitch() {

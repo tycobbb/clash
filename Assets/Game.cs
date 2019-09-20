@@ -10,7 +10,7 @@ public class Game: MonoBehaviour {
 
   // -- lifecycle --
   internal void Awake() {
-    Log.sLevel = Log.Level.Info;
+    Log.sLevel = Log.Level.Debug;
     Log.LogFn = Debug.Log;
     Log.LogErrFn = Debug.LogError;
 

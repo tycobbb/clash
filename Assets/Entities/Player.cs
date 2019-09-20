@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using U = UnityEngine;
+using Input.Ext;
 
 public sealed class Player {
   // -- core --
@@ -15,7 +16,10 @@ public sealed class Player {
   private const float kJump = 5.0f;
   private const float kJumpShort = 3.0f;
   private const float kFastFall = 6.0f;
-  private const float kWalk = 3.0f;
+  private const float kDash = 5.0f;
+  private const float kDashFrames = 5;
+  private const float kRun = 4.0f;
+  private const float kWalk = 2.0f;
   private const float kDrift = 0.2f;
   private const float kMaxAirSpeedX = 3.0f;
 
@@ -54,12 +58,23 @@ public sealed class Player {
     // tick through any state changes
     if (mState.Any(State.kJumpStart)) {
       OnJumpWait(inputs);
+    } else if (mState.Any(State.kDashing)) {
+      OnDashWait(inputs);
     }
 
     // handle analog stick movement
     OnMoveX(inputs);
     OnMoveY(inputs);
   }
+
+  public void OnPostSimulation(U.Vector2 v) {
+    mVelocity = v;
+
+    if (mState.Any(State.Type.Airborne)) {
+      LimitAirSpeed();
+    }
+  }
+
 
   // -- events/jump
   void OnFullJumpDown() {
@@ -99,8 +114,18 @@ public sealed class Player {
 
     if (mState.Any(State.Type.Airborne)) {
       Drift(mag);
-    } else if (!mState.Any(State.Type.Jump1fWait | State.Type.Jump1sWait)) {
-      Move(mag);
+    } else if (mState.Any(State.kDashing)) {
+      if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
+        Dash(stick.mDirection);
+      }
+    } else if (mState.Any(State.kRunning)) {
+      Run(stick.mDirection);
+    } else if (!mState.Any(State.kProhibitsMove)) {
+      if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
+        Dash(stick.mDirection);
+      } else {
+        Walk(mag);
+      }
     }
   }
 
@@ -112,21 +137,88 @@ public sealed class Player {
       return;
     }
 
-    if (mState.Any(State.Type.Falling) && stick.IsDown() && stick.DidSwitch()) {
+    if (mState.Any(State.Type.Falling) && IsHardSwitch(stick, Input.Direction.Down)) {
       FastFall();
     }
   }
 
-  public void OnPostSimulation(U.Vector2 v) {
-    mVelocity = v;
+  // -- events/run
+  void OnDashWait(Input.IStream inputs) {
+    if (mState.mFrame < kDashFrames) {
+      return;
+    }
 
-    if (mState.Any(State.Type.Airborne)) {
-      LimitAirSpeed();
+    // capture primary state
+    var state = mState.mType;
+
+    // determine dash direction
+    var direction = Input.Direction.Neutral;
+    switch (state) {
+      case State.Type.DashLeft:
+        direction = Input.Direction.Left; break;
+      case State.Type.DashRight:
+        direction = Input.Direction.Right; break;
+    }
+
+    // enter run if dash and current direction are the same
+    var stick = inputs.GetCurrent().mMove;
+    if (stick.mDirection != direction) {
+      // TODO: enter a skid/stop state
+      SwitchState(State.Type.Idling);
+    } else if (state == State.Type.DashLeft) {
+      SwitchState(State.Type.RunLeft);
+    } else {
+      SwitchState(State.Type.RunRight);
     }
   }
 
+  // -- events/helpers
+  private bool IsHardSwitch(Input.Analog stick, Input.Direction direction) {
+    if (!stick.mDirection.Intersects(direction)) {
+      return false;
+    }
+
+    var pos = stick.mPosition;
+    var mag = U.Mathf.Abs(direction.IsHorizontal() ? pos.x : pos.y);
+
+    return mag >= 0.8f;
+  }
+
   // -- commands --
-  void Move(float xMove) {
+  // -- commands/run
+  void Dash(Input.Direction direction) {
+    var state = direction.IsLeft() ? State.Type.DashLeft : State.Type.DashRight;
+
+    // ignore repeat dashes, but allow dash back
+    if (mState.Is(State.kDashing) && mState.Is(state)) {
+      return;
+    }
+
+    SwitchState(state);
+    mVelocity = new U.Vector2(direction.IsLeft() ? -kDash : kDash, 0.0f);
+  }
+
+  void Run(Input.Direction direction) {
+    // determine next state
+    var next = State.Type.Idling;
+    switch (direction) {
+      case Input.Direction.Left:
+        next = State.Type.RunLeft; break;
+      case Input.Direction.Right:
+        next = State.Type.RunRight; break;
+    }
+
+    // stay in run if it matches the current state
+    var curr = mState.mType;
+    if (curr == next) {
+      mVelocity = new U.Vector2(direction.IsLeft() ? -kRun : kRun, 0.0f);
+    } else {
+      // TODO: switch to "Stopping" state, Idling when v.x = 0
+      SwitchState(State.Type.Idling);
+    }
+  }
+
+  void Walk(float xMove) {
     // TODO: should SwitchState ignore duplicate states, and also, what is a duplicate?
     if (!mState.Is(State.Type.Walking)) {
       SwitchState(State.Type.Walking);
@@ -135,6 +227,7 @@ public sealed class Player {
     mVelocity = new U.Vector2(xMove * kWalk, 0.0f);
   }
 
+  // -- commands/jump
   void StartFullJump() {
     SwitchState(State.Type.Jump1fWait);
   }
@@ -200,15 +293,30 @@ public sealed class Player {
     public enum Type {
       Idling = 1 << 0,
       Walking = 1 << 1,
-      Jump1fWait = 1 << 2,
-      Jump1sWait = 1 << 3,
-      Airborne = 1 << 4,
-      Falling = 1 << 5
+      DashLeft = 1 << 2,
+      DashRight = 1 << 3,
+      RunLeft = 1 << 4,
+      RunRight = 1 << 5,
+      Jump1fWait = 1 << 6,
+      Jump1sWait = 1 << 7,
+      Airborne = 1 << 8,
+      Falling = 1 << 9
     }
 
     public const Type kJumpStart = 0
       | Type.Jump1fWait
       | Type.Jump1sWait;
+
+    public const Type kDashing = 0
+      | Type.DashLeft
+      | Type.DashRight;
+
+    public const Type kRunning = 0
+      | Type.RunLeft
+      | Type.RunRight;
+
+    public const Type kProhibitsMove = 0
+      | kJumpStart;
 
     public const Type kProhibitsJump1 = 0
       | kJumpStart

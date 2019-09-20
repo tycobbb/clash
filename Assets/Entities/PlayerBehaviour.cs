@@ -56,7 +56,7 @@ public sealed class PlayerBehaviour: MonoBehaviour {
   private Rigidbody2D Body() {
     var body = GetComponent<Rigidbody2D>();
     if (body == null) {
-      Debug.LogError("[Player] missing body!");
+      Log.Error("[Player] missing body!");
     }
 
     return body;

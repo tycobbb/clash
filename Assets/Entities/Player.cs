@@ -113,7 +113,6 @@ public sealed class Player {
     }
 
     if (mState.Any(State.Type.Falling) && stick.IsDown() && stick.DidSwitch()) {
-      U.Debug.Log("Fast fall!");
       FastFall();
     }
   }
@@ -176,17 +175,17 @@ public sealed class Player {
   }
 
   private void SwitchState(State.Type type) {
-    U.Debug.Log("[Player] State Switch: " + type);
+    Log.Debug("[Player] State Switch: " + type);
     mState = new State(type);
   }
 
   private void ReplaceState(State.Type type) {
-    U.Debug.Log("[Player] State Replace: " + type);
+    Log.Debug("[Player] State Replace: " + type);
     mState.Replace(type);
   }
 
   private void JoinState(State.Type type) {
-    U.Debug.Log("[Player] State Join: " + type);
+    Log.Debug("[Player] State Join: " + type);
     mState.Join(type);
   }
 

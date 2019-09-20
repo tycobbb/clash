@@ -10,13 +10,17 @@ public class Game: MonoBehaviour {
 
   // -- lifecycle --
   void Awake() {
+    Log.sLevel = Log.Level.Info;
+    Log.LogFn = Debug.Log;
+    Log.LogErrFn = Debug.LogError;
+
     mEntities = new EntityRepo();
     mInputs = Services.Root.Inputs();
   }
 
   void Start() {
     if (mDevMode) {
-      Debug.Log("[Game] Dev Mode Enabled!");
+      Log.Info("[Game] Dev Mode Enabled!");
 
       var visible = mEntities.FindVisible();
       foreach (var entity in visible) {

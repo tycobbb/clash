@@ -9,7 +9,7 @@ public class Game: MonoBehaviour {
   private EntityRepo mEntities;
 
   // -- lifecycle --
-  void Awake() {
+  internal void Awake() {
     Log.sLevel = Log.Level.Info;
     Log.LogFn = Debug.Log;
     Log.LogErrFn = Debug.LogError;
@@ -18,7 +18,7 @@ public class Game: MonoBehaviour {
     mInputs = Services.Root.Inputs();
   }
 
-  void Start() {
+  internal void Start() {
     if (mDevMode) {
       Log.Info("[Game] Dev Mode Enabled!");
 
@@ -30,7 +30,7 @@ public class Game: MonoBehaviour {
     }
   }
 
-  void FixedUpdate() {
+  internal void FixedUpdate() {
     mInputs.OnUpdate();
   }
 

@@ -6,12 +6,12 @@ public sealed class PlayerBehaviour: MonoBehaviour {
   private Input.IMutableStream mInputs;
 
   // -- lifecycle --
-  void Awake() {
+  internal void Awake() {
     mPlayer = new Player();
     mInputs = Services.Root.Inputs();
   }
 
-  void Start() {
+  internal void Start() {
     // set initial state
     var nContacts = Body().GetContacts(new Collider2D[0]);
     mPlayer.OnStart(nContacts == 0);
@@ -20,7 +20,7 @@ public sealed class PlayerBehaviour: MonoBehaviour {
     Body().gravityScale = Player.kGravity;
   }
 
-  void FixedUpdate() {
+  internal void FixedUpdate() {
     var body = Body();
 
     // sync body to entity and run update
@@ -47,7 +47,7 @@ public sealed class PlayerBehaviour: MonoBehaviour {
     }
   }
 
-  void OnCollisionEnter2D(Collision2D _) {
+  internal void OnCollisionEnter2D(Collision2D _) {
     // TODO: land conditionally, not on every collision
     mPlayer.Land();
   }

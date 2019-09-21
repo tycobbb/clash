@@ -1,55 +1,53 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using U = UnityEngine;
 using Input.Ext;
 
 namespace Player {
+  using K = Config;
+
   public sealed class Player {
     // -- core --
-    public U.Vector2 mVelocity = U.Vector2.zero;
-    public U.Vector2 mForce = U.Vector2.zero;
+    public U.Vector2 Velocity = U.Vector2.zero;
+    public U.Vector2 Force = U.Vector2.zero;
 
     // -- state-machine --
-    private State mState;
+    private State state;
 
     // -- events --
     public void OnStart(bool isAirborne) {
       if (isAirborne) {
-        mState = new Airborne(isFalling: true);
+        state = new Airborne(isFalling: true);
       } else {
-        mState = new Idle();
+        state = new Idle();
       }
     }
 
     public void OnPreUpdate(U.Vector2 v) {
-      mState.AdvanceFrame();
+      state.AdvanceFrame();
 
       // sync body data
-      mForce = U.Vector2.zero;
-      mVelocity = new U.Vector2(v.x, v.y);
+      Force = U.Vector2.zero;
+      Velocity = new U.Vector2(v.x, v.y);
     }
 
     public void OnUpdate(Input.IStream inputs) {
       var input = inputs.GetCurrent();
 
       // check for physics-based state changes
-      if (mState is Airborne && mVelocity.y <= 0.0f) {
+      if (state is Airborne && Velocity.y <= 0.0f) {
         Fall();
       }
 
       // handle button inputs
-      if (input.mJumpA.IsDown()) {
+      if (input.JumpA.IsDown()) {
         OnFullJumpDown();
-      } else if (input.mJumpB.IsDown()) {
+      } else if (input.JumpB.IsDown()) {
         OnShortJumpDown();
       }
 
       // tick through any state changes
-      if (mState is JumpWait) {
+      if (state is JumpWait) {
         OnJumpWait(inputs);
-      } else if (mState is Dash) {
+      } else if (state is Dash) {
         OnDashWait(inputs);
       }
 
@@ -59,32 +57,36 @@ namespace Player {
     }
 
     public void OnPostSimulation(U.Vector2 v) {
-      mVelocity = v;
+      Velocity = v;
 
-      if (mState is Airborne) {
+      if (state is Airborne) {
         LimitAirSpeed();
       }
     }
 
     // -- events/jump
     void OnFullJumpDown() {
-      if (!(mState is JumpWait)) {
-        StartFullJump();
+      if (state is JumpWait || state is Airborne) {
+        return;
       }
+
+      StartFullJump();
     }
 
     void OnShortJumpDown() {
-      if (!(mState is JumpWait)) {
-        StartShortJump();
+      if (state is JumpWait || state is Airborne) {
+        return;
       }
+
+      StartShortJump();
     }
 
     void OnJumpWait(Input.IStream inputs) {
-      var jump = mState as JumpWait;
+      var jump = state as JumpWait;
       var input = inputs.GetCurrent();
 
       // switch to short jump if button is released within the frame window
-      if (!jump.IsShort && !input.mJumpA.IsActive()) {
+      if (!jump.IsShort && !input.JumpA.IsActive()) {
         jump.IsShort = true;
       }
 
@@ -96,29 +98,29 @@ namespace Player {
 
     // -- events/move
     void OnMoveX(Input.IStream inputs) {
-      var stick = inputs.GetCurrent().mMove;
+      var stick = inputs.GetCurrent().Move;
 
       // capture move strength
-      var mag = stick.mPosition.x;
+      var mag = stick.Position.x;
 
       // fire airborne commands
-      if (mState is Airborne) {
+      if (state is Airborne) {
         Drift(mag);
       }
       // fire dash commands
-      else if (mState is Dash) {
+      else if (state is Dash) {
         if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
-          Dash(stick.mDirection);
+          Dash(stick.Direction);
         }
       }
       // fire run commands
-      else if (mState is Run) {
-        Run(stick.mDirection);
+      else if (state is Run) {
+        Run(stick.Direction);
       }
       // fire move commands
-      else if (!(mState is JumpWait)) {
+      else if (!(state is JumpWait)) {
         if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
-          Dash(stick.mDirection);
+          Dash(stick.Direction);
         } else {
           Walk(mag);
         }
@@ -126,14 +128,14 @@ namespace Player {
     }
 
     void OnMoveY(Input.IStream inputs) {
-      var stick = inputs.GetCurrent().mMove;
+      var stick = inputs.GetCurrent().Move;
 
-      var mag = stick.mPosition.y;
+      var mag = stick.Position.y;
       if (mag == 0.0f) {
         return;
       }
 
-      var airborne = mState as Airborne;
+      var airborne = state as Airborne;
       if (airborne?.IsFalling == true && IsHardSwitch(stick, Input.Direction.Down)) {
         FastFall();
       }
@@ -141,14 +143,14 @@ namespace Player {
 
     // -- events/run
     void OnDashWait(Input.IStream inputs) {
-      var dash = mState as Dash;
+      var dash = state as Dash;
       if (dash.Frame < K.DashFrames) {
         return;
       }
 
       // enter run if dash and current direction are the same
-      var stick = inputs.GetCurrent().mMove;
-      if (dash.Direction == stick.mDirection) {
+      var stick = inputs.GetCurrent().Move;
+      if (dash.Direction == stick.Direction) {
         Run(dash.Direction);
       } else {
         // TODO: enter a skid/stop jump
@@ -158,11 +160,11 @@ namespace Player {
 
     // -- events/helpers
     private bool IsHardSwitch(Input.Analog stick, Input.Direction direction) {
-      if (!stick.mDirection.Intersects(direction)) {
+      if (!stick.Direction.Intersects(direction)) {
         return false;
       }
 
-      var pos = stick.mPosition;
+      var pos = stick.Position;
       var mag = U.Mathf.Abs(direction.IsHorizontal() ? pos.x : pos.y);
 
       return mag >= 0.8f;
@@ -171,7 +173,7 @@ namespace Player {
     // -- commands --
     // -- commands/run
     void Dash(Input.Direction direction) {
-      var jump = mState as Dash;
+      var jump = state as Dash;
 
       // ignore repeat dashes, but allow dash back
       if (jump?.Direction == direction) {
@@ -179,11 +181,11 @@ namespace Player {
       }
 
       SwitchState(new Dash(direction));
-      mVelocity = new U.Vector2(direction.IsLeft() ? -K.Dash : K.Dash, 0.0f);
+      Velocity = new U.Vector2(direction.IsLeft() ? -K.Dash : K.Dash, 0.0f);
     }
 
     void Run(Input.Direction direction) {
-      var run = mState as Run;
+      var run = state as Run;
       if (run == null) {
         run = new Run(direction);
         SwitchState(run);
@@ -191,7 +193,7 @@ namespace Player {
 
       // stay in run if it matches the current state
       if (run.Direction == direction) {
-        mVelocity = new U.Vector2(direction.IsLeft() ? -K.Run : K.Run, 0.0f);
+        Velocity = new U.Vector2(direction.IsLeft() ? -K.Run : K.Run, 0.0f);
       } else {
         // TODO: switch to "Stopping" state, Idling when v.x = 0
         SwitchState(new Idle());
@@ -200,7 +202,7 @@ namespace Player {
 
     void Walk(float xMove) {
       if (xMove == 0.0f) {
-        if (!(mState is Idle)) {
+        if (!(state is Idle)) {
           SwitchState(new Idle());
         }
 
@@ -208,11 +210,11 @@ namespace Player {
       }
 
       // TODO: should SwitchState ignore duplicate states, and also, what is a duplicate?
-      if (!(mState is Walk)) {
+      if (!(state is Walk)) {
         SwitchState(new Walk());
       }
 
-      mVelocity = new U.Vector2(xMove * K.Walk, 0.0f);
+      Velocity = new U.Vector2(xMove * K.Walk, 0.0f);
     }
 
     // -- commands/jump
@@ -225,26 +227,26 @@ namespace Player {
     }
 
     void Jump() {
-      var jump = mState as JumpWait;
+      var jump = state as JumpWait;
       SwitchState(new Airborne(isFalling: false));
-      mVelocity = mVelocity.WithY(jump.IsShort ? K.JumpShort : K.Jump);
+      Velocity = Velocity.WithY(jump.IsShort ? K.JumpShort : K.Jump);
     }
 
     void Drift(float xMov) {
-      mForce.x += xMov * K.Drift;
+      Force.x += xMov * K.Drift;
     }
 
     void Fall() {
-      var airborne = mState as Airborne;
+      var airborne = state as Airborne;
       airborne.IsFalling = true;
     }
 
     void FastFall() {
-      mVelocity = mVelocity.WithY(-K.FastFall);
+      Velocity = Velocity.WithY(-K.FastFall);
     }
 
     public void Land() {
-      var airborne = mState as Airborne;
+      var airborne = state as Airborne;
       if (airborne?.IsFalling != true) {
         return;
       }
@@ -253,13 +255,13 @@ namespace Player {
     }
 
     void LimitAirSpeed() {
-      var v = mVelocity;
-      mVelocity = new U.Vector2(U.Mathf.Clamp(v.x, -K.MaxAirSpeedX, K.MaxAirSpeedX), v.y);
+      var v = Velocity;
+      Velocity = new U.Vector2(U.Mathf.Clamp(v.x, -K.MaxAirSpeedX, K.MaxAirSpeedX), v.y);
     }
 
     private void SwitchState(State state) {
       Log.Debug("[Player] State Switch: " + state);
-      mState = state;
+      this.state = state;
     }
   }
 }

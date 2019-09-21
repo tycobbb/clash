@@ -1,27 +1,27 @@
 namespace Input {
   public struct Button {
-    public State mState { get; }
+    public StateB State { get; }
 
     // -- lifetime --
-    internal Button(State state) {
-      mState = state;
+    internal Button(StateB state) {
+      State = state;
     }
 
     // -- queries --
     public bool IsDown() {
-      return mState == State.Down;
+      return State == StateB.Down;
     }
 
     public bool IsActive() {
-      return mState == State.Down || mState == State.Active;
+      return State == StateB.Down || State == StateB.Active;
     }
+  }
 
-    // -- types --
-    public enum State {
-      Inactive,
-      Down,
-      Active,
-      Up
-    }
+  // -- types --
+  public enum StateB {
+    Inactive,
+    Down,
+    Active,
+    Up
   }
 }

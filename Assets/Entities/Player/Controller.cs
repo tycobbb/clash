@@ -1,53 +1,53 @@
 using UnityEngine;
 
 namespace Player {
-  public sealed class PlayerBehaviour: MonoBehaviour {
+  public sealed class Controller: MonoBehaviour {
     // -- dependencies --
-    private Player mPlayer;
-    private Input.IMutableStream mInputs;
+    private Player player;
+    private Input.IMutableStream inputs;
 
     // -- lifecycle --
-    internal void Awake() {
-      mPlayer = new Player();
-      mInputs = Services.Root.Inputs();
+    public void Awake() {
+      player = new Player();
+      inputs = Services.Root.Inputs();
     }
 
-    internal void Start() {
+    public void Start() {
       // set initial state
       var nContacts = Body().GetContacts(new Collider2D[0]);
-      mPlayer.OnStart(nContacts == 0);
+      player.OnStart(nContacts == 0);
     }
 
-    internal void FixedUpdate() {
+    public void FixedUpdate() {
       var body = Body();
 
       // sync body to entity and run update
-      mPlayer.OnPreUpdate(body.velocity);
-      mPlayer.OnUpdate(mInputs);
+      player.OnPreUpdate(body.velocity);
+      player.OnUpdate(inputs);
 
       // sync entity back to body
-      var newV = mPlayer.mVelocity;
+      var newV = player.Velocity;
       if (!body.velocity.Equals(newV)) {
         body.velocity = newV;
       }
 
-      var newF = mPlayer.mForce;
+      var newF = player.Force;
       if (!newF.Equals(Vector2.zero)) {
         body.AddForce(newF, ForceMode2D.Impulse);
       }
 
       // run post-simulation
-      mPlayer.OnPostSimulation(body.velocity);
+      player.OnPostSimulation(body.velocity);
 
-      newV = mPlayer.mVelocity;
+      newV = player.Velocity;
       if (!body.velocity.Equals(newV)) {
         body.velocity = newV;
       }
     }
 
-    internal void OnCollisionEnter2D(Collision2D _) {
+    public void OnCollisionEnter2D(Collision2D _) {
       // TODO: land conditionally, not on every collision
-      mPlayer.Land();
+      player.Land();
     }
 
     // -- queries --

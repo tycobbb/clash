@@ -37,7 +37,7 @@ namespace Input {
     }
 
     private Analog CaptureMove() {
-      var current = mCurrent.mMove;
+      var current = mCurrent.Move;
 
       var position = new U.Vector2(
         U.Input.GetAxis("MoveX"),
@@ -61,14 +61,14 @@ namespace Input {
         direction = position.y > 0.0f ? Direction.Up : Direction.Down;
       }
 
-      Analog.State state;
-      if (direction != current.mDirection) {
-        state = Analog.State.Switch;
+      StateA state;
+      if (direction != current.Direction) {
+        state = StateA.Switch;
       } else {
-        state = Analog.State.Active;
+        state = StateA.Active;
       }
 
-      if (state == Analog.State.Switch) {
+      if (state == StateA.Switch) {
         Log.Verbose("[Input.Stream] Switch Direction: " + direction);
       }
 
@@ -76,13 +76,13 @@ namespace Input {
     }
 
     private Button CaptureButton(string name) {
-      Button.State state;
+      StateB state;
       if (U.Input.GetButtonDown(name)) {
-        state = Button.State.Down;
+        state = StateB.Down;
       } else if (U.Input.GetButtonUp(name)) {
-        state = Button.State.Up;
+        state = StateB.Up;
       } else {
-        state = U.Input.GetButton(name) ? Button.State.Active : Button.State.Inactive;
+        state = U.Input.GetButton(name) ? StateB.Active : StateB.Inactive;
       }
 
       return new Button(state);

@@ -1,5 +1,5 @@
 namespace Player {
-  internal static class K {
+  internal static class Config {
     internal const int JumpWaitFrames = 8;
     internal const float Jump = 5.0f;
     internal const float JumpShort = 3.0f;

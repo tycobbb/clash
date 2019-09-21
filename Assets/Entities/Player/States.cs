@@ -1,6 +1,6 @@
 namespace Player {
   // -- names --
-  internal enum StateName {
+  public enum StateName {
     Idle = 1 << 0,
     Walk = 1 << 1,
     Dash = 1 << 2,
@@ -10,42 +10,42 @@ namespace Player {
   }
 
   // -- states --
-  internal sealed class Idle: State {
-    internal Idle() : base(StateName.Idle) { }
+  public sealed class Idle: State {
+    public Idle() : base(StateName.Idle) { }
   }
 
-  internal sealed class Walk: State {
-    internal Walk() : base(StateName.Walk) { }
+  public sealed class Walk: State {
+    public Walk() : base(StateName.Walk) { }
   }
 
-  internal sealed class Dash: State {
-    internal readonly Input.Direction Direction;
+  public sealed class Dash: State {
+    public readonly Input.Direction Direction;
 
-    internal Dash(Input.Direction direction) : base(StateName.Dash) {
+    public Dash(Input.Direction direction) : base(StateName.Dash) {
       Direction = direction;
     }
   }
 
-  internal sealed class Run: State {
-    internal readonly Input.Direction Direction;
+  public sealed class Run: State {
+    public readonly Input.Direction Direction;
 
-    internal Run(Input.Direction direction) : base(StateName.Run) {
+    public Run(Input.Direction direction) : base(StateName.Run) {
       Direction = direction;
     }
   }
 
-  internal sealed class JumpWait: State {
-    internal bool IsShort;
+  public sealed class JumpWait: State {
+    public bool IsShort;
 
-    internal JumpWait(bool isShort) : base(StateName.JumpWait) {
+    public JumpWait(bool isShort) : base(StateName.JumpWait) {
       IsShort = isShort;
     }
   }
 
-  internal sealed class Airborne: State {
-    internal bool IsFalling;
+  public sealed class Airborne: State {
+    public bool IsFalling;
 
-    internal Airborne(bool isFalling) : base(StateName.Airborne) {
+    public Airborne(bool isFalling) : base(StateName.Airborne) {
       IsFalling = isFalling;
     }
   }

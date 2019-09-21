@@ -1,14 +1,14 @@
 namespace Input {
   public struct Snapshot {
-    public Analog mMove { get; }
-    public Button mJumpA { get; }
-    public Button mJumpB { get; }
+    public Analog Move { get; }
+    public Button JumpA { get; }
+    public Button JumpB { get; }
 
     // -- lifetime --
     internal Snapshot(Analog move, Button jumpA, Button jumpB) {
-      mMove = move;
-      mJumpA = jumpA;
-      mJumpB = jumpB;
+      Move = move;
+      JumpA = jumpA;
+      JumpB = jumpB;
     }
   }
 }

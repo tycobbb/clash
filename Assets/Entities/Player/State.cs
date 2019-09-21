@@ -4,19 +4,19 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Player {
-  internal abstract class State {
+  public abstract class State {
     // -- properties
-    internal StateName Name;
-    internal int Frame;
+    public StateName Name;
+    public int Frame;
 
     // -- lifetime
-    internal State(StateName name) {
+    public State(StateName name) {
       Name = name;
       Frame = 0;
     }
 
     // -- commands
-    internal void AdvanceFrame() {
+    public void AdvanceFrame() {
       Frame++;
     }
   }

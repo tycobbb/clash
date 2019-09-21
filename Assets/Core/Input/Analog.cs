@@ -3,38 +3,38 @@ using Input.Ext;
 
 namespace Input {
   public struct Analog {
-    public State mState { get; }
-    public Direction mDirection { get; }
-    public U.Vector2 mPosition { get; }
+    public StateA State { get; }
+    public Direction Direction { get; }
+    public U.Vector2 Position { get; }
 
     // -- lifetime --
-    internal Analog(State state, Direction direction, U.Vector2 position) {
-      mState = state;
-      mDirection = direction;
-      mPosition = position;
+    internal Analog(StateA state, Direction direction, U.Vector2 position) {
+      State = state;
+      Direction = direction;
+      Position = position;
     }
 
     // -- queries --
     public bool IsNeutral() {
-      return mDirection.IsNeutral();
+      return Direction.IsNeutral();
     }
 
     public bool IsLeft() {
-      return mDirection.IsLeft();
+      return Direction.IsLeft();
     }
 
     public bool IsRight() {
-      return mDirection.IsRight();
+      return Direction.IsRight();
     }
 
     public bool DidSwitch() {
-      return mState == State.Switch;
+      return State == StateA.Switch;
     }
+  }
 
-    // -- types --
-    public enum State {
-      Switch,
-      Active
-    }
+  // -- types --
+  public enum StateA {
+    Switch,
+    Active
   }
 }

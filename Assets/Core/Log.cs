@@ -6,28 +6,28 @@ internal static class Log {
   internal static Action<string> LogErrFn;
 
   // -- properties --
-  internal static Level sLevel;
+  internal static LogLevel Level;
 
   // -- impls --
   internal static void Error(string message) {
-    LogMessage(Level.Error, message);
+    LogMessage(LogLevel.Error, message);
   }
   internal static void Info(string message) {
-    LogMessage(Level.Info, message);
+    LogMessage(LogLevel.Info, message);
   }
 
   internal static void Debug(string message) {
-    LogMessage(Level.Debug, message);
+    LogMessage(LogLevel.Debug, message);
   }
 
   internal static void Verbose(string message) {
-    LogMessage(Level.Verbose, message);
+    LogMessage(LogLevel.Verbose, message);
   }
 
-  private static void LogMessage(Level level, string message) {
-    if (level <= sLevel) {
+  private static void LogMessage(LogLevel level, string message) {
+    if (level <= Level) {
       message = "[" + Prefix(level) + "] " + message;
-      if (level != Level.Error) {
+      if (level != LogLevel.Error) {
         LogFn(message);
       } else {
         LogErrFn(message);
@@ -35,27 +35,27 @@ internal static class Log {
     }
   }
 
-  private static string Prefix(Level level) {
+  private static string Prefix(LogLevel level) {
     switch (level) {
-      case Level.Error:
+      case LogLevel.Error:
         return "E";
-      case Level.Info:
+      case LogLevel.Info:
         return "I";
-      case Level.Debug:
+      case LogLevel.Debug:
         return "D";
-      case Level.Verbose:
+      case LogLevel.Verbose:
         return "V";
       default:
         return "";
     }
   }
+}
 
-  // -- types --
-  internal enum Level {
-    None,
-    Error,
-    Info,
-    Debug,
-    Verbose
-  }
+// -- types --
+internal enum LogLevel {
+  None,
+  Error,
+  Info,
+  Debug,
+  Verbose
 }

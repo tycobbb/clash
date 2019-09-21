@@ -1,6 +1,8 @@
 using UnityEngine;
 
 namespace Player {
+  using K = Config;
+
   public sealed class Controller: MonoBehaviour {
     // -- dependencies --
     private Player player;
@@ -13,6 +15,11 @@ namespace Player {
     }
 
     public void Start() {
+      // set constants
+      Body().freezeRotation = true;
+      Body().gravityScale = K.Gravity;
+      Body().sharedMaterial.friction = K.Friction;
+
       // set initial state
       var nContacts = Body().GetContacts(new Collider2D[0]);
       player.OnStart(nContacts == 0);

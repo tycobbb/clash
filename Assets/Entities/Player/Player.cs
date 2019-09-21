@@ -55,7 +55,7 @@ namespace Player {
         case Run _:
           OnRun(inputs); break;
         case Skid _:
-          OnSkid(); break;
+          OnSkid(inputs); break;
         case JumpWait j:
           OnJumpWait(j, inputs); break;
         case Airborne a:
@@ -64,10 +64,16 @@ namespace Player {
     }
 
     public void OnPostSimulation(U.Vector2 v) {
-      Velocity = v;
+      // sync body data
+      Force = U.Vector2.zero;
+      Velocity = new U.Vector2(v.x, v.y);
 
-      if (state is Airborne) {
-        LimitAirSpeed();
+      // handle per-state updates
+      switch (state) {
+        case Dash _:
+          OnDashLate(); break;
+        case Airborne _:
+          OnAirborneLate(); break;
       }
     }
 
@@ -112,14 +118,24 @@ namespace Player {
       }
     }
 
+    void OnDashLate() {
+      LimitGroundSpeed();
+    }
+
     void OnRun(Input.IStream inputs) {
       var stick = inputs.GetCurrent().Move;
       Run(stick.Direction);
     }
 
-    void OnSkid() {
-      if (Velocity.x == 0.0f) {
-        SwitchState(new Idle());
+    void OnSkid(Input.IStream inputs) {
+      var stick = inputs.GetCurrent().Move;
+
+      if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
+        Dash(stick.Direction, stick.Position.x);
+      } else if (stick.Position.x != 0.0f) {
+        Walk(stick.Position.x);
+      } else if (Velocity.x == 0.0f) {
+        Idle();
       }
     }
 
@@ -165,6 +181,10 @@ namespace Player {
       }
     }
 
+    void OnAirborneLate() {
+      LimitAirSpeed();
+    }
+
     // -- events/helpers
     private bool IsHardSwitch(Input.Analog stick, Input.Direction direction) {
       if (!stick.Direction.Intersects(direction)) {
@@ -205,6 +225,11 @@ namespace Player {
       Force.x += dir.IsLeft() ? -force : force;
     }
 
+    void LimitGroundSpeed() {
+      var v = Velocity;
+      Velocity = new U.Vector2(U.Mathf.Clamp(v.x, -K.Run, K.Run), v.y);
+    }
+
     void Run(Input.Direction direction) {
       var run = state as Run;
       if (run == null) {
@@ -216,6 +241,7 @@ namespace Player {
       if (run.Direction == direction) {
         Velocity = new U.Vector2(direction.IsLeft() ? -K.Run : K.Run, 0.0f);
       } else {
+        // TODO: enter turnaround
         Skid();
       }
     }

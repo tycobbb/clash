@@ -1,7 +1,10 @@
 namespace Player {
   public static class Config {
+    public const float Gravity = 1.0f;
+    public const float Friction = 0.65f;
+
     // -- run/walk-
-    public const float Run = 4.0f;
+    public const float Run = 6.0f;
     public const float Walk = 2.0f;
 
     // -- dash --
@@ -19,6 +22,6 @@ namespace Player {
 
     // -- airborne --
     public const float Drift = 0.2f;
-    public const float MaxAirSpeedX = 3.0f;
+    public const float MaxAirSpeedX = 6.0f;
   }
 }

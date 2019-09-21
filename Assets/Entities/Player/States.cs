@@ -1,12 +1,13 @@
 namespace Player {
   // -- names --
   public enum StateName {
-    Idle = 1 << 0,
-    Walk = 1 << 1,
-    Dash = 1 << 2,
-    Run = 1 << 3,
-    JumpWait = 1 << 4,
-    Airborne = 1 << 5
+    Idle,
+    Walk,
+    Dash,
+    Run,
+    Skid,
+    JumpWait,
+    Airborne
   }
 
   // -- states --
@@ -32,6 +33,10 @@ namespace Player {
     public Run(Input.Direction direction) : base(StateName.Run) {
       Direction = direction;
     }
+  }
+
+  public sealed class Skid: State {
+    public Skid() : base(StateName.Skid) { }
   }
 
   public sealed class JumpWait: State {

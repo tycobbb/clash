@@ -30,6 +30,11 @@ namespace Input {
     public bool DidSwitch() {
       return State == StateA.Switch;
     }
+
+    // -- debug --
+    public override string ToString() {
+      return $"<Analog | State={State} Dir={Direction} Pos={Position}>";
+    }
   }
 
   // -- types --

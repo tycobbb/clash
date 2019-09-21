@@ -15,6 +15,11 @@ namespace Input {
     public bool IsActive() {
       return State == StateB.Down || State == StateB.Active;
     }
+
+    // -- debug --
+    public override string ToString() {
+      return $"<Button | State={State}>";
+    }
   }
 
   // -- types --

@@ -10,5 +10,10 @@ namespace Input {
       JumpA = jumpA;
       JumpB = jumpB;
     }
+
+    // -- debug --
+    public override string ToString() {
+      return $"<Snapshot | Move={Move} JumpA={JumpA} JumpB={JumpB}>";
+    }
   }
 }

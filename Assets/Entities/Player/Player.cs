@@ -44,16 +44,23 @@ namespace Player {
         OnShortJumpDown();
       }
 
-      // tick through any state changes
-      if (state is JumpWait) {
-        OnJumpWait(inputs);
-      } else if (state is Dash) {
-        OnDashWait(inputs);
+      // handle per-state updates
+      switch (state) {
+        case Idle _:
+          OnIdle(inputs); break;
+        case Walk _:
+          OnWalk(inputs); break;
+        case Dash d:
+          OnDash(d, inputs); break;
+        case Run _:
+          OnRun(inputs); break;
+        case Skid _:
+          OnSkid(); break;
+        case JumpWait j:
+          OnJumpWait(j, inputs); break;
+        case Airborne a:
+          OnAirborne(a, inputs); break;
       }
-
-      // handle analog stick movement
-      OnMoveX(inputs);
-      OnMoveY(inputs);
     }
 
     public void OnPostSimulation(U.Vector2 v) {
@@ -61,6 +68,58 @@ namespace Player {
 
       if (state is Airborne) {
         LimitAirSpeed();
+      }
+    }
+
+    // -- events/neutral
+    void OnIdle(Input.IStream inputs) {
+      var stick = inputs.GetCurrent().Move;
+
+      if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
+        Dash(stick.Direction, stick.Position.x);
+      } else {
+        Walk(stick.Position.x);
+      }
+    }
+
+    // -- events/move
+    void OnWalk(Input.IStream inputs) {
+      var stick = inputs.GetCurrent().Move;
+
+      if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
+        Dash(stick.Direction, stick.Position.x);
+      } else {
+        Walk(stick.Position.x);
+      }
+    }
+
+    void OnDash(Dash dash, Input.IStream inputs) {
+      var stick = inputs.GetCurrent().Move;
+
+      // check for a dash back
+      if (IsHardSwitch(stick, dash.Direction.Invert())) {
+        Dash(stick.Direction, stick.Position.x);
+      }
+      // this dash is incomplete, so keep dashing
+      else if (dash.Frame < K.DashFrames) {
+        Dash(dash.Direction, stick.Position.x);
+      }
+      // otherwise, transition out of dash
+      else if (stick.Direction == dash.Direction) {
+        Run(dash.Direction);
+      } else {
+        Skid();
+      }
+    }
+
+    void OnRun(Input.IStream inputs) {
+      var stick = inputs.GetCurrent().Move;
+      Run(stick.Direction);
+    }
+
+    void OnSkid() {
+      if (Velocity.x == 0.0f) {
+        SwitchState(new Idle());
       }
     }
 
@@ -81,8 +140,7 @@ namespace Player {
       StartShortJump();
     }
 
-    void OnJumpWait(Input.IStream inputs) {
-      var jump = state as JumpWait;
+    void OnJumpWait(JumpWait jump, Input.IStream inputs) {
       var input = inputs.GetCurrent();
 
       // switch to short jump if button is released within the frame window
@@ -96,65 +154,14 @@ namespace Player {
       }
     }
 
-    // -- events/move
-    void OnMoveX(Input.IStream inputs) {
+    void OnAirborne(Airborne airborne, Input.IStream inputs) {
+      // add air control
       var stick = inputs.GetCurrent().Move;
+      Drift(stick.Position.x);
 
-      // capture move strength
-      var mag = stick.Position.x;
-
-      // fire airborne commands
-      if (state is Airborne) {
-        Drift(mag);
-      }
-      // fire dash commands
-      else if (state is Dash) {
-        if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
-          Dash(stick.Direction);
-        }
-      }
-      // fire run commands
-      else if (state is Run) {
-        Run(stick.Direction);
-      }
-      // fire move commands
-      else if (!(state is JumpWait)) {
-        if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
-          Dash(stick.Direction);
-        } else {
-          Walk(mag);
-        }
-      }
-    }
-
-    void OnMoveY(Input.IStream inputs) {
-      var stick = inputs.GetCurrent().Move;
-
-      var mag = stick.Position.y;
-      if (mag == 0.0f) {
-        return;
-      }
-
-      var airborne = state as Airborne;
+      // fastfall on a fresh down input
       if (airborne?.IsFalling == true && IsHardSwitch(stick, Input.Direction.Down)) {
         FastFall();
-      }
-    }
-
-    // -- events/run
-    void OnDashWait(Input.IStream inputs) {
-      var dash = state as Dash;
-      if (dash.Frame < K.DashFrames) {
-        return;
-      }
-
-      // enter run if dash and current direction are the same
-      var stick = inputs.GetCurrent().Move;
-      if (dash.Direction == stick.Direction) {
-        Run(dash.Direction);
-      } else {
-        // TODO: enter a skid/stop jump
-        SwitchState(new Idle());
       }
     }
 
@@ -171,17 +178,31 @@ namespace Player {
     }
 
     // -- commands --
-    // -- commands/run
-    void Dash(Input.Direction direction) {
-      var jump = state as Dash;
+    void Idle() {
+      SwitchState(new Idle());
+    }
 
-      // ignore repeat dashes, but allow dash back
-      if (jump?.Direction == direction) {
-        return;
+    // -- commands/walk&run
+    // See: https://www.ssbwiki.com/Dash
+    void Dash(Input.Direction dir, float xAxis) {
+      var dash = state as Dash;
+
+      // if a new dash or direction change, set state and initial velocity
+      if (dash == null || dash.Direction != dir) {
+        dash = new Dash(dir);
+        SwitchState(dash);
+        Velocity = new U.Vector2(dir.IsLeft() ? -K.DashInitial : K.DashInitial, 0.0f);
       }
 
-      SwitchState(new Dash(direction));
-      Velocity = new U.Vector2(direction.IsLeft() ? -K.Dash : K.Dash, 0.0f);
+      // apply dash force based on xAxis
+      var isAxisAligned =
+        xAxis < 0 && dir.IsLeft() ||
+        xAxis > 0 && dir.IsRight();
+
+      var scale = isAxisAligned ? U.Mathf.Abs(xAxis) : 0.0f;
+      var force = K.DashBase + K.DashScale * scale;
+
+      Force.x += dir.IsLeft() ? -force : force;
     }
 
     void Run(Input.Direction direction) {
@@ -195,21 +216,23 @@ namespace Player {
       if (run.Direction == direction) {
         Velocity = new U.Vector2(direction.IsLeft() ? -K.Run : K.Run, 0.0f);
       } else {
-        // TODO: switch to "Stopping" state, Idling when v.x = 0
-        SwitchState(new Idle());
+        Skid();
       }
+    }
+
+    void Skid() {
+      SwitchState(new Skid());
     }
 
     void Walk(float xMove) {
       if (xMove == 0.0f) {
         if (!(state is Idle)) {
-          SwitchState(new Idle());
+          Idle();
         }
 
         return;
       }
 
-      // TODO: should SwitchState ignore duplicate states, and also, what is a duplicate?
       if (!(state is Walk)) {
         SwitchState(new Walk());
       }

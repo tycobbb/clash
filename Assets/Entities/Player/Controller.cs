@@ -15,13 +15,15 @@ namespace Player {
     }
 
     public void Start() {
+      var body = Body();
+
       // set constants
-      Body().freezeRotation = true;
-      Body().gravityScale = K.Gravity;
-      Body().sharedMaterial.friction = K.Friction;
+      body.freezeRotation = true;
+      body.gravityScale = K.Gravity;
+      body.sharedMaterial.friction = K.Friction;
 
       // set initial state
-      var nContacts = Body().GetContacts(new Collider2D[0]);
+      var nContacts = body.GetContacts(new Collider2D[0]);
       player.OnStart(nContacts == 0);
     }
 

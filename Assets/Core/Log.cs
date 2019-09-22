@@ -1,26 +1,26 @@
 using System;
 
-internal static class Log {
+public static class Log {
   // -- dependencies --
-  internal static Action<string> LogFn;
-  internal static Action<string> LogErrFn;
+  public static Action<string> LogFn;
+  public static Action<string> LogErrFn;
 
   // -- properties --
-  internal static LogLevel Level;
+  public static LogLevel Level;
 
   // -- impls --
-  internal static void Error(string message) {
+  public static void Error(string message) {
     LogMessage(LogLevel.Error, message);
   }
-  internal static void Info(string message) {
+  public static void Info(string message) {
     LogMessage(LogLevel.Info, message);
   }
 
-  internal static void Debug(string message) {
+  public static void Debug(string message) {
     LogMessage(LogLevel.Debug, message);
   }
 
-  internal static void Verbose(string message) {
+  public static void Verbose(string message) {
     LogMessage(LogLevel.Verbose, message);
   }
 
@@ -52,7 +52,7 @@ internal static class Log {
 }
 
 // -- types --
-internal enum LogLevel {
+public enum LogLevel {
   None,
   Error,
   Info,

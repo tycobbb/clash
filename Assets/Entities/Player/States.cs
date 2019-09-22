@@ -5,6 +5,7 @@ namespace Player {
     Walk,
     Dash,
     Run,
+    Pivot,
     Skid,
     JumpWait,
     Airborne
@@ -33,6 +34,10 @@ namespace Player {
     public Run(Input.Direction direction) : base(StateName.Run) {
       Direction = direction;
     }
+  }
+
+  public sealed class Pivot: State {
+    public Pivot() : base(StateName.Pivot) { }
   }
 
   public sealed class Skid: State {

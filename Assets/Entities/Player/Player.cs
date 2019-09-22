@@ -54,6 +54,8 @@ namespace Player {
           OnDash(d, inputs); break;
         case Run _:
           OnRun(inputs); break;
+        case Pivot p:
+          OnPivot(p, inputs); break;
         case Skid _:
           OnSkid(inputs); break;
         case JumpWait j:
@@ -127,6 +129,12 @@ namespace Player {
       Run(stick.Direction);
     }
 
+    void OnPivot(Pivot pivot, Input.IStream _) {
+      if (pivot.Frame >= K.RunPivotFrames) {
+        Idle();
+      }
+    }
+
     void OnSkid(Input.IStream inputs) {
       var stick = inputs.GetCurrent().Move;
 
@@ -187,14 +195,18 @@ namespace Player {
 
     // -- events/helpers
     private bool IsHardSwitch(Input.Analog stick, Input.Direction direction) {
-      if (!stick.Direction.Intersects(direction)) {
+      if (!stick.DidSwitch() || !stick.Direction.Intersects(direction)) {
         return false;
       }
 
       var pos = stick.Position;
       var mag = U.Mathf.Abs(direction.IsHorizontal() ? pos.x : pos.y);
 
-      return mag >= 0.8f;
+      if (mag < 0.5f) {
+        Log.Debug($"mag: {mag}");
+      }
+
+      return mag >= 0.5f;
     }
 
     // -- commands --
@@ -241,9 +253,12 @@ namespace Player {
       if (run.Direction == direction) {
         Velocity = new U.Vector2(direction.IsLeft() ? -K.Run : K.Run, 0.0f);
       } else {
-        // TODO: enter turnaround
-        Skid();
+        Pivot();
       }
+    }
+
+    void Pivot() {
+      SwitchState(new Pivot());
     }
 
     void Skid() {

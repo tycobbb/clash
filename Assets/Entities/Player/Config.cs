@@ -6,6 +6,7 @@ namespace Player {
     // -- run/walk-
     public const float Run = 6.0f;
     public const float Walk = 2.0f;
+    public const int RunPivotFrames = 30;
 
     // -- dash --
     public const int DashFrames = 15;

@@ -83,7 +83,7 @@ namespace Player {
     void OnIdle(Input.IStream inputs) {
       var stick = inputs.GetCurrent().Move;
 
-      if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
+      if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.x);
       } else {
         Walk(stick.Position.x);
@@ -94,7 +94,7 @@ namespace Player {
     void OnWalk(Input.IStream inputs) {
       var stick = inputs.GetCurrent().Move;
 
-      if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
+      if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.x);
       } else {
         Walk(stick.Position.x);
@@ -105,7 +105,7 @@ namespace Player {
       var stick = inputs.GetCurrent().Move;
 
       // check for a dash back
-      if (IsHardSwitch(stick, dash.Direction.Invert())) {
+      if (DidTap(stick, dash.Direction.Invert())) {
         Dash(stick.Direction, stick.Position.x);
       }
       // this dash is incomplete, so keep dashing
@@ -138,7 +138,7 @@ namespace Player {
     void OnSkid(Input.IStream inputs) {
       var stick = inputs.GetCurrent().Move;
 
-      if (IsHardSwitch(stick, Input.Direction.Horizontal)) {
+      if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.x);
       } else if (stick.Position.x != 0.0f) {
         Walk(stick.Position.x);
@@ -184,7 +184,7 @@ namespace Player {
       Drift(stick.Position.x);
 
       // fastfall on a fresh down input
-      if (airborne?.IsFalling == true && IsHardSwitch(stick, Input.Direction.Down)) {
+      if (airborne?.IsFalling == true && DidTap(stick, Input.Direction.Down)) {
         FastFall();
       }
     }
@@ -194,19 +194,8 @@ namespace Player {
     }
 
     // -- events/helpers
-    private bool IsHardSwitch(Input.Analog stick, Input.Direction direction) {
-      if (!stick.DidSwitch() || !stick.Direction.Intersects(direction)) {
-        return false;
-      }
-
-      var pos = stick.Position;
-      var mag = U.Mathf.Abs(direction.IsHorizontal() ? pos.x : pos.y);
-
-      if (mag < 0.5f) {
-        Log.Debug($"mag: {mag}");
-      }
-
-      return mag >= 0.5f;
+    private bool DidTap(Input.Analog stick, Input.Direction direction) {
+      return stick.DidTap() && stick.Direction.Intersects(direction);
     }
 
     // -- commands --
@@ -324,7 +313,7 @@ namespace Player {
     }
 
     private void SwitchState(State state) {
-      Log.Debug("[Player] State Switch: " + state);
+      Log.Debug($"[Player] SwitchState({state})");
       this.state = state;
     }
   }

@@ -3,12 +3,14 @@ namespace Input {
     public Analog Move { get; }
     public Button JumpA { get; }
     public Button JumpB { get; }
+    public float Time { get; }
 
     // -- lifetime --
-    internal Snapshot(Analog move, Button jumpA, Button jumpB) {
+    internal Snapshot(Analog move, Button jumpA, Button jumpB, float time) {
       Move = move;
       JumpA = jumpA;
       JumpB = jumpB;
+      Time = time;
     }
 
     // -- debug --

@@ -27,8 +27,8 @@ namespace Input {
       return Direction.IsRight();
     }
 
-    public bool DidSwitch() {
-      return State == StateA.Switch;
+    public bool DidTap() {
+      return State == StateA.SwitchTap;
     }
 
     // -- debug --
@@ -39,7 +39,10 @@ namespace Input {
 
   // -- types --
   public enum StateA {
+    Inactive,
     Switch,
-    Active
+    SwitchTap,
+    Active,
+    Unknown
   }
 }

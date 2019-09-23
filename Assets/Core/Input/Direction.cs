@@ -1,3 +1,5 @@
+using U = UnityEngine;
+
 namespace Input {
   public enum Direction {
     Neutral = 1 << 0,
@@ -9,6 +11,7 @@ namespace Input {
     Horizontal = Left | Right,
   }
 
+  // -- extensions --
   namespace Ext {
     public static class DirectionExt {
       // -- queries --

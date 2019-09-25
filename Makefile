@@ -8,6 +8,7 @@ lib_name  = Clash
 lib_root  = ./$(lib_name)
 lib_build = $(lib_root)/bin/Debug/netstandard2.0
 lib_dll   = $(lib_build)/$(lib_name).dll
+lib_pdb   = $(lib_build)/$(lib_name).pdb
 app_name  = $(lib_name).Unity
 app_root  = ./$(app_name)
 app_libs  = $(app_root)/Assets/Plugins
@@ -40,6 +41,7 @@ b/lib:
 	dotnet build $(lib_root)
 	mkdir -p $(app_libs)
 	cp $(lib_dll) $(app_libs)
+	cp $(lib_pdb) $(app_libs)
 .PHONY: b/lib
 
 # -- test --

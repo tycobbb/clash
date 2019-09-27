@@ -10,17 +10,24 @@ public sealed class PlayerController: MonoBehaviour {
 
   // -- lifecycle --
   public void Awake() {
+    // set dependencies
     player = new Player();
     inputs = Services.Root.Inputs();
   }
 
   public void Start() {
-    var body = Body();
-
     // set constants
+    var body = Body();
     body.freezeRotation = true;
     body.gravityScale = K.Gravity;
     body.sharedMaterial.friction = K.Friction;
+
+    // size player & colliders
+    // TODO: setting localScale breaks the frame debugging material
+    transform.localScale = K.Size.ToNative();
+
+    var hurtbox = Hurtbox();
+    hurtbox.SetSize(K.HurtboxSize.ToNative());
 
     // set initial state
     var nContacts = body.GetContacts(new Collider2D[0]);
@@ -68,5 +75,14 @@ public sealed class PlayerController: MonoBehaviour {
     }
 
     return body;
+  }
+
+  private Hurtbox2D Hurtbox() {
+    var hurtbox = GetComponentInChildren<Hurtbox2D>();
+    if (hurtbox == null) {
+      C.Log.Error("[Player] missing hurtbox!");
+    }
+
+    return hurtbox;
   }
 }

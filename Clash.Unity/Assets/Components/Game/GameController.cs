@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 using C = Clash;
 
@@ -7,7 +8,6 @@ public class GameController: MonoBehaviour {
 
   // -- dependencies --
   private C.Input.IMutableStream inputs;
-  private EntityRepo entities;
 
   // -- lifecycle --
   public void Awake() {
@@ -17,7 +17,6 @@ public class GameController: MonoBehaviour {
 
     var services = Services.Root;
     inputs = services.Inputs();
-    entities = services.Entities();
   }
 
   public void Start() {
@@ -30,19 +29,9 @@ public class GameController: MonoBehaviour {
     inputs.OnUpdate(Time.fixedUnscaledTime);
   }
 
-  // -- queries --
-  private Material GetDebugMaterial() {
-    return GetComponent<MeshRenderer>().material;
-  }
-
   // -- commands --
   private void EnableDevMode() {
     C.Log.Info("[Game] Dev Mode Enabled!");
-
-    var visible = entities.FindVisible();
-    foreach (var entity in visible) {
-      var renderer = entity.GetComponent<MeshRenderer>();
-      renderer.material = GetDebugMaterial();
-    }
+    EditorWindow.FocusWindowIfItsOpen(typeof(SceneView));
   }
 }

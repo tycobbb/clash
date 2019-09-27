@@ -5,11 +5,11 @@ namespace Clash.Player {
   using K = Config;
 
   public sealed class Player {
-    // -- core --
+    // -- physics --
     public Vec Velocity = Vec.Zero;
     public Vec Force = Vec.Zero;
 
-    // -- state-machine --
+    // -- state machine --
     private State state;
 
     // -- events --

@@ -1,3 +1,5 @@
+using Clash.Maths;
+
 namespace Clash.Player {
   public static class Config {
     public const float Gravity = 1.0f;
@@ -24,5 +26,9 @@ namespace Clash.Player {
     // -- airborne --
     public const float Drift = 0.2f;
     public const float MaxAirSpeedX = 6.0f;
+
+    // -- size / hit detection --
+    public static readonly Vec Size = new Vec(1.0f, 2.0f);
+    public static readonly Vec HurtboxSize = new Vec(1.0f, 0.9f);
   }
 }

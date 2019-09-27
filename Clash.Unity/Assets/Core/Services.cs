@@ -12,10 +12,6 @@ public sealed class Services {
     return inputs;
   }
 
-  public EntityRepo Entities() {
-    return new EntityRepo();
-  }
-
   // -- singleton (TODO: inject this) --
   private static Services mRoot = null;
 

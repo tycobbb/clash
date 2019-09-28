@@ -63,8 +63,8 @@ public sealed class PlayerController: MonoBehaviour {
   }
 
   public void OnCollisionEnter2D(Collision2D _) {
-    // TODO: land conditionally, not on every collision
-    player.Land();
+    // TODO: pass collision information into domain
+    player.OnCollide();
   }
 
   // -- queries --

@@ -12,11 +12,42 @@ namespace Clash.Maths {
     }
 
     // -- operators --
+    public static Vec operator +(Vec a, Vec b) {
+      return new Vec(
+        a.X + b.X,
+        a.Y + b.Y
+      );
+    }
+
     public static Vec operator -(Vec a, Vec b) {
       return new Vec(
         a.X - b.X,
         a.Y - b.Y
       );
+    }
+
+    public static Vec operator *(Vec a, float s) {
+      return new Vec(
+        a.X * s,
+        a.Y * s
+      );
+    }
+
+    public static Vec operator /(Vec a, float s) {
+      return new Vec(
+        a.X / s,
+        a.Y / s
+      );
+    }
+
+    public Vec Normalize() {
+      var mag = Mag();
+
+      if (mag == 0.0f) {
+        return Zero;
+      } else {
+        return this / mag;
+      }
     }
 
     // -- queries --

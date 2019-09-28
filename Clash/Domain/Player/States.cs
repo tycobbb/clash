@@ -1,3 +1,5 @@
+using Clash.Maths;
+
 namespace Clash.Player {
   // -- names --
   public enum StateName {
@@ -8,7 +10,8 @@ namespace Clash.Player {
     Pivot,
     Skid,
     JumpWait,
-    Airborne
+    Airborne,
+    AirDodge
   }
 
   // -- states --
@@ -57,6 +60,16 @@ namespace Clash.Player {
 
     public Airborne(bool isFalling) : base(StateName.Airborne) {
       IsFalling = isFalling;
+    }
+  }
+
+  public sealed class AirDodge: State {
+    public Vec Direction;
+    public bool IsOnGround;
+
+    public AirDodge(Vec direction, bool isOnGround = true) : base(StateName.AirDodge) {
+      Direction = direction;
+      IsOnGround = isOnGround;
     }
   }
 }

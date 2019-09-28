@@ -42,6 +42,8 @@ namespace Clash.Player {
         OnFullJumpDown();
       } else if (input.JumpB.IsDown()) {
         OnShortJumpDown();
+      } else if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
+        OnShieldDown(inputs);
       }
 
       // handle per-state updates
@@ -62,6 +64,8 @@ namespace Clash.Player {
           OnJumpWait(j, inputs); break;
         case Airborne a:
           OnAirborne(a, inputs); break;
+        case AirDodge a:
+          OnAirDodge(a); break;
       }
     }
 
@@ -76,6 +80,15 @@ namespace Clash.Player {
           OnDashLate(); break;
         case Airborne _:
           OnAirborneLate(); break;
+      }
+    }
+
+    public void OnCollide() {
+      switch (state) {
+        case Airborne a:
+          OnAirborneCollide(a); break;
+        case AirDodge a:
+          OnAirDodgeCollide(a); break;
       }
     }
 
@@ -164,6 +177,18 @@ namespace Clash.Player {
       StartShortJump();
     }
 
+    void OnShieldDown(Input.IStream inputs) {
+      var stick = inputs.GetCurrent().Move;
+      var direction = stick.Position.Normalize();
+
+      switch (state) {
+        case JumpWait _:
+          StartWavedash(direction); break;
+        case Airborne _:
+          StartAirDodge(direction); break;
+      }
+    }
+
     void OnJumpWait(JumpWait jump, Input.IStream inputs) {
       var input = inputs.GetCurrent();
 
@@ -189,8 +214,36 @@ namespace Clash.Player {
       }
     }
 
+    void OnAirborneCollide(Airborne airborne) {
+      if (airborne.IsFalling) {
+        Land();
+      }
+    }
+
     void OnAirborneLate() {
       LimitAirSpeed();
+    }
+
+    void OnAirDodge(AirDodge airDodge) {
+      var frame = airDodge.Frame;
+
+      // stop momentum and fire dodge on frame 0
+      if (frame == 0) {
+        Velocity = Vec.Zero;
+        Force += airDodge.Direction * K.AirDodge;
+      }
+      // TODO: enter helpless when finished
+      else if (frame >= K.AirDodgeFrames) {
+        if (airDodge.IsOnGround) {
+          Idle();
+        } else {
+          Fall();
+        }
+      }
+    }
+
+    void OnAirDodgeCollide(AirDodge airDodge) {
+      airDodge.IsOnGround = true;
     }
 
     // -- events/helpers
@@ -279,6 +332,18 @@ namespace Clash.Player {
       SwitchState(new JumpWait(isShort: true));
     }
 
+    void StartAirDodge(Vec direction) {
+      // TODO: use a larger "dead zone" on air dodge so inputs that aren't at the
+      // edges of the stickbox register as a neutral air dodge
+      var state = new AirDodge(direction);
+      SwitchState(state);
+    }
+
+    void StartWavedash(Vec direction) {
+      var state = new AirDodge(direction, isOnGround: true);
+      SwitchState(state);
+    }
+
     void Jump() {
       var jump = state as JumpWait;
       SwitchState(new Airborne(isFalling: false));
@@ -291,6 +356,11 @@ namespace Clash.Player {
 
     void Fall() {
       var airborne = state as Airborne;
+      if (airborne == null) {
+        airborne = new Airborne(isFalling: true);
+        SwitchState(airborne);
+      }
+
       airborne.IsFalling = true;
     }
 
@@ -298,13 +368,9 @@ namespace Clash.Player {
       Velocity = new Vec(Velocity.X, -K.FastFall);
     }
 
-    public void Land() {
-      var airborne = state as Airborne;
-      if (airborne?.IsFalling != true) {
-        return;
-      }
-
-      SwitchState(new Idle());
+    void Land() {
+      // TODO: transition to landing state
+      Idle();
     }
 
     void LimitAirSpeed() {
@@ -312,7 +378,7 @@ namespace Clash.Player {
       Velocity = new Vec(Mathf.Clamp(v.X, -K.MaxAirSpeedX, K.MaxAirSpeedX), v.Y);
     }
 
-    private void SwitchState(State state) {
+    void SwitchState(State state) {
       Log.Debug($"[Player] SwitchState({state})");
       this.state = state;
     }

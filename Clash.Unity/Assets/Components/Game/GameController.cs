@@ -11,7 +11,7 @@ public class GameController: MonoBehaviour {
 
   // -- lifecycle --
   public void Awake() {
-    C.Log.Level = C.LogLevel.Verbose;
+    C.Log.Level = C.LogLevel.Debug;
     C.Log.LogFn = Debug.Log;
     C.Log.LogErrFn = Debug.LogError;
 

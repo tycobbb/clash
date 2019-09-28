@@ -42,6 +42,8 @@ namespace Clash.Input {
         CaptureMove(time),
         CaptureButton("JumpA"),
         CaptureButton("JumpB"),
+        CaptureButton("ShieldL"),
+        CaptureButton("ShieldR"),
         time
       );
     }

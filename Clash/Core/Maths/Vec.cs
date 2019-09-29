@@ -1,5 +1,4 @@
 namespace Clash.Maths {
-  // -- impls --
   public struct Vec {
     // -- properties --
     public float X { get; set; }

@@ -19,12 +19,14 @@ public class Hurtbox2D: MonoBehaviour {
 
     Gizmos.color = Color;
     Gizmos.matrix = transform.localToWorldMatrix;
-    Gizmos.DrawCube(Vector3.zero, collider.size);
+    Gizmos.DrawCube(collider.offset, collider.size);
   }
 
   // -- commands --
-  public void SetSize(Vector2 size) {
-    Collider().size = size;
+  public void SetFrame(Vector2 offset, Vector2 size) {
+    var collider = Collider();
+    collider.offset = offset;
+    collider.size = size;
   }
 
   // -- queries --

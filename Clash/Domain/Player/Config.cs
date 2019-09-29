@@ -32,7 +32,9 @@ namespace Clash.Player {
     public const float AirDodge = 5.0f;
 
     // -- size / hit detection --
-    public static readonly Vec Size = new Vec(1.0f, 2.0f);
-    public static readonly Vec HurtboxSize = new Vec(1.0f, 0.9f);
+    public static readonly Vec Offset = new Vec(0.1f, 0.0f);
+    public static readonly Vec Size = new Vec(1.0f, 1.6f);
+    public static readonly Vec PushboxSize = new Vec(1.0f, 1.6f);
+    public static readonly Vec HurtboxSize = new Vec(1.0f, 1.4f);
   }
 }

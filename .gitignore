@@ -1,6 +1,10 @@
-# build artifacts
+# c# build artifacts
 bin/
 obj/
 
-# compiled library plugin
+# compiled lib target
 Clash.Unity/Assets/Plugins/Clash.*
+
+# blender models
+*.blend
+*.blend1

@@ -22,12 +22,16 @@ public sealed class PlayerController: MonoBehaviour {
     body.gravityScale = K.Gravity;
     body.sharedMaterial.friction = K.Friction;
 
-    // size player & colliders
-    // TODO: setting localScale breaks the frame debugging material
-    transform.localScale = K.Size.ToNative();
+    // size colliders
+    var collider = Collider();
+    collider.offset = K.Offset.ToNative();
+    collider.size = K.Size.ToNative();
+
+    var pushbox = Pushbox();
+    pushbox.SetFrame(K.Offset.ToNative(), K.PushboxSize.ToNative());
 
     var hurtbox = Hurtbox();
-    hurtbox.SetSize(K.HurtboxSize.ToNative());
+    hurtbox.SetFrame(K.Offset.ToNative(), K.HurtboxSize.ToNative());
 
     // set initial state
     var nContacts = body.GetContacts(new Collider2D[0]);
@@ -75,6 +79,24 @@ public sealed class PlayerController: MonoBehaviour {
     }
 
     return body;
+  }
+
+  private BoxCollider2D Collider() {
+    var collider = GetComponentInChildren<BoxCollider2D>();
+    if (collider == null) {
+      C.Log.Error("[Player] missing collider!");
+    }
+
+    return collider;
+  }
+
+  private Pushbox2D Pushbox() {
+    var pushbox = GetComponentInChildren<Pushbox2D>();
+    if (pushbox == null) {
+      C.Log.Error("[Player] missing pushbox!");
+    }
+
+    return pushbox;
   }
 
   private Hurtbox2D Hurtbox() {

@@ -3,7 +3,7 @@ namespace Clash.Input {
     public StateB State { get; }
 
     // -- lifetime --
-    internal Button(StateB state) {
+    public Button(StateB state) {
       State = state;
     }
 

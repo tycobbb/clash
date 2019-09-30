@@ -10,7 +10,12 @@ namespace Clash.Input {
     public Vec RawPosition { get; }
 
     // -- lifetime --
-    internal Analog(StateA state, Direction direction, Vec position, Vec rawPosition) {
+    public Analog(
+      StateA state,
+      Direction direction,
+      Vec position,
+      Vec rawPosition
+    ) {
       State = state;
       Direction = direction;
       Position = position;

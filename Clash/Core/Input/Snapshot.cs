@@ -8,7 +8,14 @@ namespace Clash.Input {
     public float Time { get; }
 
     // -- lifetime --
-    internal Snapshot(Analog move, Button jumpA, Button jumpB, Button shieldL, Button shieldR, float time) {
+    public Snapshot(
+      Analog move,
+      Button jumpA,
+      Button jumpB,
+      Button shieldL,
+      Button shieldR,
+      float time
+    ) {
       Move = move;
       JumpA = jumpA;
       JumpB = jumpB;

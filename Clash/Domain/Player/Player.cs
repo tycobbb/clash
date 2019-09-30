@@ -6,23 +6,27 @@ namespace Clash.Player {
 
   public sealed class Player {
     // -- physics --
-    public Vec Velocity = Vec.Zero;
-    public Vec Force = Vec.Zero;
+    public Vec Velocity;
+    public Vec Force;
 
     // -- state machine --
-    private State state;
+    public State State { get; private set; }
 
-    // -- events --
-    public void OnStart(bool isAirborne) {
-      if (isAirborne) {
-        state = new Airborne(isFalling: true);
+    // -- properties --
+    public bool IsFacingLeft { get; private set; }
+
+    // -- lifetime --
+    public Player(bool isOnGround) {
+      if (isOnGround) {
+        State = new Idle();
       } else {
-        state = new Idle();
+        State = new Airborne(isFalling: true);
       }
     }
 
+    // -- events --
     public void OnPreUpdate(Vec v) {
-      state.AdvanceFrame();
+      State.AdvanceFrame();
 
       // sync body data
       Force = Vec.Zero;
@@ -33,7 +37,7 @@ namespace Clash.Player {
       var input = inputs.GetCurrent();
 
       // check for physics-based state changes
-      if (state is Airborne && Velocity.Y <= 0.0f) {
+      if (State is Airborne && Velocity.Y <= 0.0f) {
         Fall();
       }
 
@@ -47,7 +51,7 @@ namespace Clash.Player {
       }
 
       // handle per-state updates
-      switch (state) {
+      switch (State) {
         case Idle _:
           OnIdle(inputs); break;
         case Walk _:
@@ -75,7 +79,7 @@ namespace Clash.Player {
       Velocity = new Vec(v.X, v.Y);
 
       // handle per-state updates
-      switch (state) {
+      switch (State) {
         case Dash _:
           OnDashLate(); break;
         case Airborne _:
@@ -84,7 +88,7 @@ namespace Clash.Player {
     }
 
     public void OnCollide() {
-      switch (state) {
+      switch (State) {
         case Airborne a:
           OnAirborneCollide(a); break;
         case AirDodge a:
@@ -98,8 +102,8 @@ namespace Clash.Player {
 
       if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.X);
-      } else {
-        Walk(stick.Position.X);
+      } else if (stick.Position.X != 0.0f) {
+        Walk(stick.Direction, stick.Position.X);
       }
     }
 
@@ -109,8 +113,10 @@ namespace Clash.Player {
 
       if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.X);
+      } else if (stick.Position.X != 0.0f) {
+        Walk(stick.Direction, stick.Position.X);
       } else {
-        Walk(stick.Position.X);
+        Idle();
       }
     }
 
@@ -154,7 +160,7 @@ namespace Clash.Player {
       if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.X);
       } else if (stick.Position.X != 0.0f) {
-        Walk(stick.Position.X);
+        Walk(stick.Direction, stick.Position.X);
       } else if (Velocity.X == 0.0f) {
         Idle();
       }
@@ -162,7 +168,7 @@ namespace Clash.Player {
 
     // -- events/jump
     void OnFullJumpDown() {
-      if (state is JumpWait || state is Airborne) {
+      if (State is JumpWait || State is Airborne) {
         return;
       }
 
@@ -170,7 +176,7 @@ namespace Clash.Player {
     }
 
     void OnShortJumpDown() {
-      if (state is JumpWait || state is Airborne) {
+      if (State is JumpWait || State is Airborne) {
         return;
       }
 
@@ -181,7 +187,7 @@ namespace Clash.Player {
       var stick = inputs.GetCurrent().Move;
       var direction = stick.Position.Normalize();
 
-      switch (state) {
+      switch (State) {
         case JumpWait _:
           StartWavedash(direction); break;
         case Airborne _:
@@ -256,16 +262,30 @@ namespace Clash.Player {
       SwitchState(new Idle());
     }
 
-    // -- commands/walk&run
+    // -- commands/move
+    void Walk(Input.Direction direction, float xMove) {
+      if (!(State is Walk)) {
+        SwitchState(new Walk());
+      }
+
+      Velocity = new Vec(xMove * K.Walk, 0.0f);
+      IsFacingLeft = direction.IsLeft();
+    }
+
     // See: https://www.ssbwiki.com/Dash
     void Dash(Input.Direction dir, float xAxis) {
-      var dash = state as Dash;
+      var dash = State as Dash;
 
-      // if a new dash or direction change, set state and initial velocity
+      // if new dash or direction change, set state
       if (dash == null || dash.Direction != dir) {
         dash = new Dash(dir);
         SwitchState(dash);
+      }
+
+      // if a new dash or direction change, set initial velocity
+      if (dash.Frame == 0) {
         Velocity = new Vec(dir.IsLeft() ? -K.DashInitial : K.DashInitial, 0.0f);
+        IsFacingLeft = dir.IsLeft();
       }
 
       // apply dash force based on xAxis
@@ -285,7 +305,7 @@ namespace Clash.Player {
     }
 
     void Run(Input.Direction direction) {
-      var run = state as Run;
+      var run = State as Run;
       if (run == null) {
         run = new Run(direction);
         SwitchState(run);
@@ -301,26 +321,11 @@ namespace Clash.Player {
 
     void Pivot() {
       SwitchState(new Pivot());
+      IsFacingLeft = !IsFacingLeft;
     }
 
     void Skid() {
       SwitchState(new Skid());
-    }
-
-    void Walk(float xMove) {
-      if (xMove == 0.0f) {
-        if (!(state is Idle)) {
-          Idle();
-        }
-
-        return;
-      }
-
-      if (!(state is Walk)) {
-        SwitchState(new Walk());
-      }
-
-      Velocity = new Vec(xMove * K.Walk, 0.0f);
     }
 
     // -- commands/jump
@@ -345,7 +350,7 @@ namespace Clash.Player {
     }
 
     void Jump() {
-      var jump = state as JumpWait;
+      var jump = State as JumpWait;
       SwitchState(new Airborne(isFalling: false));
       Velocity = new Vec(Velocity.X, jump.IsShort ? K.JumpShort : K.Jump);
     }
@@ -355,7 +360,7 @@ namespace Clash.Player {
     }
 
     void Fall() {
-      var airborne = state as Airborne;
+      var airborne = State as Airborne;
       if (airborne == null) {
         airborne = new Airborne(isFalling: true);
         SwitchState(airborne);
@@ -380,7 +385,7 @@ namespace Clash.Player {
 
     void SwitchState(State state) {
       Log.Debug($"[Player] SwitchState({state})");
-      this.state = state;
+      this.State = state;
     }
   }
 }

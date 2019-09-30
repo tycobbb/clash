@@ -19,6 +19,7 @@ namespace Clash.Player {
     public Idle() : base(StateName.Idle) { }
   }
 
+  // -- states/move
   public sealed class Walk: State {
     public Walk() : base(StateName.Walk) { }
   }
@@ -47,6 +48,7 @@ namespace Clash.Player {
     public Skid() : base(StateName.Skid) { }
   }
 
+  // -- states/jump
   public sealed class JumpWait: State {
     public bool IsShort;
 

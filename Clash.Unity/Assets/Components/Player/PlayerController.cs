@@ -4,14 +4,15 @@ using Clash.Player;
 using K = Clash.Player.Config;
 
 public sealed class PlayerController: MonoBehaviour {
-  // -- dependencies --
+  // -- entities --
   private Player player;
+
+  // -- dependencies --
   private C.Input.IMutableStream inputs;
 
   // -- lifecycle --
   public void Awake() {
     // set dependencies
-    player = new Player();
     inputs = Services.Root.Inputs();
   }
 
@@ -35,7 +36,7 @@ public sealed class PlayerController: MonoBehaviour {
 
     // set initial state
     var nContacts = body.GetContacts(new Collider2D[0]);
-    player.OnStart(nContacts == 0);
+    player = new Player(isOnGround: nContacts == 0);
   }
 
   public void FixedUpdate() {

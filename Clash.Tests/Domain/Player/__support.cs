@@ -12,39 +12,68 @@ namespace Clash.Player.Tests {
       return player;
     }
 
-    public static Player MakeDash(Input.IStream stream, Input.Direction direction) {
+    public static Player MakeDash(Input.IStream stream, float x) {
       var player = MakeIdle();
-      player.SimulateInput(stream, Snapshots.MakeTap(direction));
+
+      player.Simulate(stream,
+        input: Snapshots.MakeTap(x)
+      );
+
       return player;
     }
 
-    public static Player MakeRun(Input.IStream stream, Input.Direction direction) {
-      var player = MakeDash(stream, direction);
-      player.SimulateInput(stream, Snapshots.MakeTilt(direction), frame: K.DashFrames);
+    public static Player MakeRun(Input.IStream stream, float x) {
+      var player = MakeDash(stream, x);
+
+      player.Simulate(stream,
+        input: Snapshots.MakeTilt(x), frame: K.DashFrames
+      );
+
       return player;
     }
 
     public static Player MakeJumpWait(Input.IStream stream) {
       var player = MakeIdle();
-      player.SimulateInput(stream, Snapshots.MakeJumpA(Input.StateB.Down));
+
+      player.Simulate(stream,
+        input: Snapshots.MakeJumpA(Input.StateB.Down)
+      );
+
+      return player;
+    }
+
+    public static Player MakeAirborne(Input.IStream stream) {
+      var player = MakeJumpWait(stream);
+
+      player.Simulate(stream,
+        input: Snapshots.MakeJumpA(Input.StateB.Down)
+      );
+
+      player.Simulate(stream,
+        input: Snapshots.MakeJumpA(),
+        frame: K.JumpWaitFrames
+      );
+
       return player;
     }
   }
 
   public static class PlayerExt {
-    public static void Simulate(this Player player, Input.IStream stream) {
-      player.OnUpdate(stream);
-      player.OnPostSimulation(player.Velocity);
-      player.OnPreUpdate(player.Velocity);
-    }
+    public static void Simulate(this Player player, Input.IStream stream, Input.Snapshot? input = null, int frame = -1) {
+      // simulate input, if any
+      if (input != null) {
+        stream.GetCurrent().Returns(input.GetValueOrDefault());
+      }
 
-    public static void SimulateInput(this Player player, Input.IStream stream, Input.Snapshot input, int frame = -1) {
+      // set frame, if any
       if (frame != -1) {
         player.State.Frame = frame;
       }
 
-      stream.GetCurrent().Returns(input);
-      player.Simulate(stream);
+      // simulate lifecycle
+      player.OnUpdate(stream);
+      player.OnPostSimulation(player.Velocity);
+      player.OnPreUpdate(player.Velocity);
     }
   }
 }

@@ -69,7 +69,7 @@ namespace Clash.Player {
     public Vec Direction;
     public bool IsOnGround;
 
-    public AirDodge(Vec direction, bool isOnGround = true) : base(StateName.AirDodge) {
+    public AirDodge(Vec direction, bool isOnGround = default) : base(StateName.AirDodge) {
       Direction = direction;
       IsOnGround = isOnGround;
     }

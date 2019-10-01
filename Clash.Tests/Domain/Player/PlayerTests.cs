@@ -21,8 +21,8 @@ namespace Clash.Player.Tests {
       var player = Players.MakeIdle();
       var stream = Substitute.For<Input.IStream>();
 
-      player.SimulateInput(stream,
-        input: Snapshots.MakeTilt(Input.Direction.Left, x: -0.5f)
+      player.Simulate(stream,
+        input: Snapshots.MakeTilt(x: -0.5f)
       );
 
       Assert.That(player.State, Is.InstanceOf<Walk>());
@@ -34,8 +34,8 @@ namespace Clash.Player.Tests {
       var player = Players.MakeIdle();
       var stream = Substitute.For<Input.IStream>();
 
-      player.SimulateInput(stream,
-        input: Snapshots.MakeTap(Input.Direction.Left)
+      player.Simulate(stream,
+        input: Snapshots.MakeTap(-1.0f)
       );
 
       Assert.That(player.State, Is.InstanceOf<Dash>());
@@ -45,10 +45,10 @@ namespace Clash.Player.Tests {
     [Test]
     public void ItDashesBackWhenTappingTheOppositeDirection() {
       var stream = Substitute.For<Input.IStream>();
-      var player = Players.MakeDash(stream, Input.Direction.Left);
+      var player = Players.MakeDash(stream, -1.0f);
 
-      player.SimulateInput(stream,
-        input: Snapshots.MakeTap(Input.Direction.Right)
+      player.Simulate(stream,
+        input: Snapshots.MakeTap(1.0f)
       );
 
       Assert.That(player.State, Is.InstanceOf<Dash>());
@@ -59,10 +59,10 @@ namespace Clash.Player.Tests {
     [Test]
     public void ItPivotsWhenChangingRunDirection() {
       var stream = Substitute.For<Input.IStream>();
-      var player = Players.MakeRun(stream, Input.Direction.Left);
+      var player = Players.MakeRun(stream, -1.0f);
 
-      player.SimulateInput(stream,
-        input: Snapshots.MakeTap(Input.Direction.Right)
+      player.Simulate(stream,
+        input: Snapshots.MakeTap(1.0f)
       );
 
       Assert.That(player.State, Is.InstanceOf<Pivot>());
@@ -75,7 +75,7 @@ namespace Clash.Player.Tests {
       var player = Players.MakeIdle();
       var stream = Substitute.For<Input.IStream>();
 
-      player.SimulateInput(stream,
+      player.Simulate(stream,
         input: Snapshots.MakeJumpA(Input.StateB.Down)
       );
 
@@ -87,7 +87,7 @@ namespace Clash.Player.Tests {
       var stream = Substitute.For<Input.IStream>();
       var player = Players.MakeJumpWait(stream);
 
-      player.SimulateInput(stream,
+      player.Simulate(stream,
         input: Snapshots.MakeJumpA(),
         frame: K.JumpWaitFrames
       );
@@ -101,7 +101,7 @@ namespace Clash.Player.Tests {
       var stream = Substitute.For<Input.IStream>();
       var player = Players.MakeJumpWait(stream);
 
-      player.SimulateInput(stream,
+      player.Simulate(stream,
         input: Snapshots.MakeJumpA(Input.StateB.Up),
         frame: K.JumpWaitFrames
       );
@@ -115,17 +115,48 @@ namespace Clash.Player.Tests {
       var player = Players.MakeIdle();
       var stream = Substitute.For<Input.IStream>();
 
-      player.SimulateInput(stream,
+      player.Simulate(stream,
         input: Snapshots.MakeJumpB(Input.StateB.Down)
       );
 
-      player.SimulateInput(stream,
+      player.Simulate(stream,
         input: Snapshots.MakeJumpB(),
         frame: K.JumpWaitFrames
       );
 
       Assert.That(player.State, Is.InstanceOf<Airborne>());
       Assert.That(player.Velocity.Y, Is.EqualTo(K.JumpShort));
+    }
+
+    [Test]
+    public void ItAirdodgesWhenPressingShieldInAir() {
+      var stream = Substitute.For<Input.IStream>();
+      var player = Players.MakeAirborne(stream);
+
+      player.Simulate(stream,
+        input: Snapshots.MakeShieldL(Input.StateB.Down)
+      );
+
+      var airDodge = player.State as AirDodge;
+      Assert.That(player.State, Is.InstanceOf<AirDodge>());
+      Assert.That(airDodge.IsOnGround, Is.False, "Should not be on ground, but is.");
+    }
+
+    [Test]
+    public void ItWavedashesWhenPressingShieldInJumpWait() {
+      var stream = Substitute.For<Input.IStream>();
+      var player = Players.MakeJumpWait(stream);
+
+      player.Simulate(stream,
+        input: Snapshots.Make(
+          move: Snapshots.MakeAnalog(Input.StateA.Active, x: -1.0f),
+          shieldL: Snapshots.MakeButton(Input.StateB.Down)
+        )
+      );
+
+      var airDodge = player.State as AirDodge;
+      Assert.That(player.State, Is.InstanceOf<AirDodge>());
+      Assert.That(airDodge.IsOnGround, Is.True, "Should be on ground, but isn't.");
     }
   }
 }

@@ -36,7 +36,7 @@ public sealed class PlayerController: MonoBehaviour {
 
     // set initial state
     var nContacts = body.GetContacts(new Collider2D[0]);
-    player = new Player(isOnGround: nContacts == 0);
+    player = new Player(isOnGround: nContacts != 0);
   }
 
   public void FixedUpdate() {

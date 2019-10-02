@@ -57,7 +57,7 @@ namespace Clash.Player.Tests {
     }
 
     [Test]
-    public void ItPivotsWhenChangingRunDirection() {
+    public void ItPivotsWhenReversingRunDirection() {
       var stream = Substitute.For<Input.IStream>();
       var player = Players.MakeRun(stream, -1.0f);
 
@@ -66,6 +66,20 @@ namespace Clash.Player.Tests {
       );
 
       Assert.That(player.State, Is.InstanceOf<Pivot>());
+      Assert.That(player.IsFacingLeft, Is.False, "Should be facing right, but was facing left.");
+    }
+
+    [Test]
+    public void ItRunsAfterPivotIfTheReversedDirectionIsHeld() {
+      var stream = Substitute.For<Input.IStream>();
+      var player = Players.MakePivot(stream, 1.0f);
+
+      player.Simulate(stream,
+        input: Snapshots.MakeTilt(1.0f),
+        frame: K.RunPivotFrames
+      );
+
+      Assert.That(player.State, Is.InstanceOf<Run>());
       Assert.That(player.IsFacingLeft, Is.False, "Should be facing right, but was facing left.");
     }
 

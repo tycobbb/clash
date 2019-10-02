@@ -148,8 +148,15 @@ namespace Clash.Player {
       Run(stick.Direction);
     }
 
-    void OnPivot(Pivot pivot, Input.IStream _) {
-      if (pivot.Frame >= K.RunPivotFrames) {
+    void OnPivot(Pivot pivot, Input.IStream inputs) {
+      if (pivot.Frame < K.RunPivotFrames) {
+        return;
+      }
+
+      var stick = inputs.GetCurrent().Move;
+      if (stick.Direction == pivot.Direction) {
+        Run(pivot.Direction);
+      } else {
         Idle();
       }
     }
@@ -315,13 +322,13 @@ namespace Clash.Player {
       if (run.Direction == direction) {
         Velocity = new Vec(direction.IsLeft() ? -K.Run : K.Run, 0.0f);
       } else {
-        Pivot();
+        Pivot(direction);
       }
     }
 
-    void Pivot() {
-      SwitchState(new Pivot());
-      IsFacingLeft = !IsFacingLeft;
+    void Pivot(Input.Direction direction) {
+      SwitchState(new Pivot(direction));
+      IsFacingLeft = direction.IsLeft();
     }
 
     void Skid() {

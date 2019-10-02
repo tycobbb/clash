@@ -41,7 +41,11 @@ namespace Clash.Player {
   }
 
   public sealed class Pivot: State {
-    public Pivot() : base(StateName.Pivot) { }
+    public readonly Input.Direction Direction;
+
+    public Pivot(Input.Direction direction) : base(StateName.Pivot) {
+      Direction = direction;
+    }
   }
 
   public sealed class Skid: State {

@@ -32,6 +32,16 @@ namespace Clash.Player.Tests {
       return player;
     }
 
+    public static Player MakePivot(Input.IStream stream, float x) {
+      var player = MakeRun(stream, -x);
+
+      player.Simulate(stream,
+        input: Snapshots.MakeTilt(x)
+      );
+
+      return player;
+    }
+
     public static Player MakeJumpWait(Input.IStream stream) {
       var player = MakeIdle();
 

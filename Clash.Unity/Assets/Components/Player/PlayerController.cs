@@ -46,7 +46,9 @@ public sealed class PlayerController: MonoBehaviour {
     player.OnPreUpdate(body.velocity.ToDomain());
     player.OnUpdate(inputs);
 
-    // sync entity back to body
+    // sync entity back to game object
+    transform.localEulerAngles = Vector3.up * ((player.IsFacingLeft) ? 180.0f : 0.0f);
+
     var newV = player.Velocity.ToNative();
     if (!body.velocity.Equals(newV)) {
       body.velocity = newV;
@@ -60,7 +62,7 @@ public sealed class PlayerController: MonoBehaviour {
     // run post-simulation
     player.OnPostSimulation(body.velocity.ToDomain());
 
-    // sync entity back to body
+    // sync entity back to game object
     newV = player.Velocity.ToNative();
     if (!body.velocity.Equals(newV)) {
       body.velocity = newV;

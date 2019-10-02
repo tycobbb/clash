@@ -22,8 +22,9 @@ namespace Clash.Input {
     private Snapshot current;
 
     // -- lifetime --
-    public Stream(ISource source) {
+    public Stream(ISource source, Snapshot initial = default) {
       Source = source;
+      current = initial;
     }
 
     // -- IStream --
@@ -83,26 +84,30 @@ namespace Clash.Input {
       var mag = Mathf.Abs(direction.IsHorizontal() ? pos.X : pos.Y);
 
       // determine analog state
-      StateA state;
-      StateA prevState = prevMove.State;
+      var state = prevMove.State;
 
+      // if the stick is neutral
       if (direction.IsNeutral()) {
-        if (speed < K.IdleSpeed || prevState == StateA.Inactive) {
+        if (state == StateA.Inactive || speed < K.IdleSpeed) {
           state = StateA.Inactive;
         } else {
           state = StateA.Unknown;
         }
-      } else if (direction == prevMove.Direction) {
-        if (prevState == StateA.Active || prevState == StateA.Switch || prevState == StateA.SwitchTap) {
+      }
+      // if we're moving in the same direction
+      else if (direction == prevMove.Direction) {
+        if (state == StateA.Active || state == StateA.Switch || state == StateA.SwitchTap) {
           state = StateA.Active;
-        } else if (speed < K.TapSpeed) {
-          state = StateA.Switch;
         } else if (speed >= K.TapSpeed && mag == 1.0f) {
           state = StateA.SwitchTap;
+        } else if (speed < K.TapSpeed) {
+          state = StateA.Switch;
         } else {
           state = StateA.Unknown;
         }
-      } else {
+      }
+      // if we switched directions this frame
+      else {
         if (speed >= K.TapSpeed && mag == 1.0f) {
           state = StateA.SwitchTap;
         } else if (speed >= K.TapSpeed) {

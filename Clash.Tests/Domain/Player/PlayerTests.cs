@@ -57,7 +57,7 @@ namespace Clash.Player.Tests {
     }
 
     [Test]
-    public void ItPivotsWhenReversingRunDirection() {
+    public void ItPivotsWhenReversingARun() {
       var stream = Substitute.For<Input.IStream>();
       var player = Players.MakeRun(stream, -1.0f);
 
@@ -67,6 +67,18 @@ namespace Clash.Player.Tests {
 
       Assert.That(player.State, Is.InstanceOf<Pivot>());
       Assert.That(player.IsFacingLeft, Is.False, "Should be facing right, but was facing left.");
+    }
+
+    [Test]
+    public void ItSkidsWhenIdlingOutOfARun() {
+      var stream = Substitute.For<Input.IStream>();
+      var player = Players.MakeRun(stream, 1.0f);
+
+      player.Simulate(stream,
+        input: Snapshots.MakeMove(Input.StateA.Idle)
+      );
+
+      Assert.That(player.State, Is.InstanceOf<Skid>());
     }
 
     [Test]
@@ -151,13 +163,28 @@ namespace Clash.Player.Tests {
         input: Snapshots.MakeShieldL(Input.StateB.Down)
       );
 
-      var airDodge = player.State as AirDodge;
       Assert.That(player.State, Is.InstanceOf<AirDodge>());
-      Assert.That(airDodge.IsOnGround, Is.False, "Should not be on ground, but is.");
+      Assert.That(player.Gravity, Is.EqualTo(0.0f));
     }
 
     [Test]
-    public void ItWavedashesWhenPressingShieldInJumpWait() {
+    public void ItFallsAfterAnAirdodge() {
+      var stream = Substitute.For<Input.IStream>();
+      var player = Players.MakeAirDodge(stream);
+
+      var nFrames = (int)Mathf.Ceil(K.AirDodge / K.AirDodgeDecay);
+      player.Simulate(stream,
+        frame: nFrames
+      );
+
+      var airborne = player.State as Airborne;
+      Assert.That(player.State, Is.InstanceOf<Airborne>());
+      Assert.That(player.Gravity, Is.EqualTo(1.0f));
+      Assert.That(airborne.IsFalling, Is.True);
+    }
+
+    [Test]
+    public void ItWaveDashesWhenPressingShieldDuringJumpWait() {
       var stream = Substitute.For<Input.IStream>();
       var player = Players.MakeJumpWait(stream);
 
@@ -168,9 +195,32 @@ namespace Clash.Player.Tests {
         )
       );
 
-      var airDodge = player.State as AirDodge;
-      Assert.That(player.State, Is.InstanceOf<AirDodge>());
-      Assert.That(airDodge.IsOnGround, Is.True, "Should be on ground, but isn't.");
+      Assert.That(player.State, Is.InstanceOf<WaveLand>());
+      Assert.That(player.IsFacingLeft, Is.False);
+    }
+
+    [Test]
+    public void ItWaveLandsWhenHittingTheGroundDuringAirDodge() {
+      var stream = Substitute.For<Input.IStream>();
+      var player = Players.MakeAirDodge(stream);
+
+      player.OnCollide();
+
+      Assert.That(player.State, Is.InstanceOf<WaveLand>());
+      Assert.That(player.Gravity, Is.EqualTo(1.0f));
+    }
+
+    [Test]
+    public void ItIdlesAfterAWaveLand() {
+      var stream = Substitute.For<Input.IStream>();
+      var player = Players.MakeWaveDash(stream);
+      var frames = (int)System.MathF.Ceiling(K.AirDodge / K.AirDodgeDecay);
+
+      player.Simulate(stream,
+        frame: frames
+      );
+
+      Assert.That(player.State, Is.InstanceOf<Idle>());
     }
   }
 }

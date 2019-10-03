@@ -8,6 +8,7 @@ namespace Clash.Player {
     // -- physics --
     public Vec Velocity;
     public Vec Force;
+    public float Gravity = K.GravityOn;
 
     // -- state machine --
     public State State { get; private set; }
@@ -42,15 +43,14 @@ namespace Clash.Player {
       }
 
       // handle button inputs
+      // TODO: handle these in per-state event handlers
       if (input.JumpA.IsDown()) {
         OnFullJumpDown();
       } else if (input.JumpB.IsDown()) {
         OnShortJumpDown();
-      } else if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
-        OnShieldDown(inputs);
       }
 
-      // handle per-state updates
+      // handle per-state events
       switch (State) {
         case Idle _:
           OnIdle(inputs); break;
@@ -58,8 +58,8 @@ namespace Clash.Player {
           OnWalk(inputs); break;
         case Dash d:
           OnDash(d, inputs); break;
-        case Run _:
-          OnRun(inputs); break;
+        case Run r:
+          OnRun(r, inputs); break;
         case Pivot p:
           OnPivot(p, inputs); break;
         case Skid _:
@@ -68,8 +68,10 @@ namespace Clash.Player {
           OnJumpWait(j, inputs); break;
         case Airborne a:
           OnAirborne(a, inputs); break;
-        case AirDodge a:
-          OnAirDodge(a); break;
+        case AirDodge _:
+          OnAirDodge(); break;
+        case WaveLand _:
+          OnWaveLand(); break;
       }
     }
 
@@ -84,6 +86,8 @@ namespace Clash.Player {
           OnDashLate(); break;
         case Airborne _:
           OnAirborneLate(); break;
+        case AirDodge a:
+          OnAirDodgeLate(a); break;
       }
     }
 
@@ -91,8 +95,8 @@ namespace Clash.Player {
       switch (State) {
         case Airborne a:
           OnAirborneCollide(a); break;
-        case AirDodge a:
-          OnAirDodgeCollide(a); break;
+        case AirDodge _:
+          OnAirDodgeCollide(); break;
       }
     }
 
@@ -124,7 +128,7 @@ namespace Clash.Player {
       var stick = inputs.GetCurrent().Move;
 
       // check for a dash back
-      if (DidTap(stick, dash.Direction.Invert())) {
+      if (DidTap(stick, dash.Direction.Reversed())) {
         Dash(stick.Direction, stick.Position.X);
       }
       // this dash is incomplete, so keep dashing
@@ -143,9 +147,17 @@ namespace Clash.Player {
       LimitGroundSpeed();
     }
 
-    void OnRun(Input.IStream inputs) {
+    void OnRun(Run run, Input.IStream inputs) {
       var stick = inputs.GetCurrent().Move;
-      Run(stick.Direction);
+
+      // stay in run if it matches the current state
+      if (stick.Direction == run.Direction) {
+        Run(run.Direction);
+      } else if (stick.Direction == run.Direction.Reversed()) {
+        Pivot(stick.Direction);
+      } else {
+        Skid();
+      }
     }
 
     void OnPivot(Pivot pivot, Input.IStream inputs) {
@@ -179,7 +191,7 @@ namespace Clash.Player {
         return;
       }
 
-      StartFullJump();
+      FullJump();
     }
 
     void OnShortJumpDown() {
@@ -187,7 +199,7 @@ namespace Clash.Player {
         return;
       }
 
-      StartShortJump();
+      ShortJump();
     }
 
     void OnShieldDown(Input.IStream inputs) {
@@ -196,7 +208,7 @@ namespace Clash.Player {
 
       switch (State) {
         case JumpWait _:
-          StartWavedash(direction); break;
+          WaveDash(direction); break;
         case Airborne _:
           StartAirDodge(direction); break;
       }
@@ -214,16 +226,28 @@ namespace Clash.Player {
       if (jump.Frame >= K.JumpWaitFrames) {
         Jump();
       }
+      // otherwise wavedash if shield is pressed
+      else if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
+        var stick = input.Move;
+        WaveDash(stick.Position.Normalize());
+      }
     }
 
     void OnAirborne(Airborne airborne, Input.IStream inputs) {
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
+
       // add air control
-      var stick = inputs.GetCurrent().Move;
       Drift(stick.Position.X);
 
-      // fastfall on a fresh down input
+      // fastfall on a downwards tap
       if (airborne?.IsFalling == true && DidTap(stick, Input.Direction.Down)) {
         FastFall();
+      }
+
+      // airdodge if shield is pressed
+      if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
+        StartAirDodge(stick.Position.Normalize());
       }
     }
 
@@ -237,26 +261,41 @@ namespace Clash.Player {
       LimitAirSpeed();
     }
 
-    void OnAirDodge(AirDodge airDodge) {
-      var frame = airDodge.Frame;
+    void OnAirDodge() {
+      AirDodge();
+    }
 
-      // stop momentum and fire dodge on frame 0
-      if (frame == 0) {
-        Velocity = Vec.Zero;
-        Force += airDodge.Direction * K.AirDodge;
+    void OnAirDodgeLate(AirDodge airDodge) {
+      var minFrames = (int)Mathf.Ceil(K.AirDodge / K.AirDodgeDecay);
+      if (airDodge.Frame < minFrames) {
+        return;
       }
-      // TODO: enter helpless when finished
-      else if (frame >= K.AirDodgeFrames) {
-        if (airDodge.IsOnGround) {
-          Idle();
-        } else {
-          Fall();
-        }
+
+      // do a coarse check to see if the player and airdodge directions
+      // oppose each other
+      var direction = airDodge.Direction;
+      var isDirectionOpposed = (
+        Mathf.Sign(Velocity.X) == -Mathf.Sign(direction.X) &&
+        Mathf.Sign(Velocity.Y) == -Mathf.Sign(direction.Y)
+      );
+
+      // if so, enter fall state
+      if (isDirectionOpposed) {
+        EndAirDodge();
+        Velocity = Vec.Zero;
+        Fall();
       }
     }
 
-    void OnAirDodgeCollide(AirDodge airDodge) {
-      airDodge.IsOnGround = true;
+    void OnAirDodgeCollide() {
+      EndAirDodge();
+      WaveLand();
+    }
+
+    void OnWaveLand() {
+      if (Velocity.X == 0.0f) {
+        Idle();
+      }
     }
 
     // -- events/helpers
@@ -296,9 +335,10 @@ namespace Clash.Player {
       }
 
       // apply dash force based on xAxis
-      var isAxisAligned =
+      var isAxisAligned = (
         xAxis < 0 && dir.IsLeft() ||
-        xAxis > 0 && dir.IsRight();
+        xAxis > 0 && dir.IsRight()
+      );
 
       var scale = isAxisAligned ? Mathf.Abs(xAxis) : 0.0f;
       var force = K.DashBase + K.DashScale * scale;
@@ -318,12 +358,7 @@ namespace Clash.Player {
         SwitchState(run);
       }
 
-      // stay in run if it matches the current state
-      if (run.Direction == direction) {
-        Velocity = new Vec(direction.IsLeft() ? -K.Run : K.Run, 0.0f);
-      } else {
-        Pivot(direction);
-      }
+      Velocity = new Vec(direction.IsLeft() ? -K.Run : K.Run, 0.0f);
     }
 
     void Pivot(Input.Direction direction) {
@@ -336,23 +371,50 @@ namespace Clash.Player {
     }
 
     // -- commands/jump
-    void StartFullJump() {
+    void FullJump() {
       SwitchState(new JumpWait(isShort: false));
     }
 
-    void StartShortJump() {
+    void ShortJump() {
       SwitchState(new JumpWait(isShort: true));
     }
 
     void StartAirDodge(Vec direction) {
       // TODO: use a larger "dead zone" on air dodge so inputs that aren't at the
       // edges of the stickbox register as a neutral air dodge
-      var state = new AirDodge(direction);
-      SwitchState(state);
+      var airDodge = new AirDodge(direction);
+      SwitchState(airDodge);
+
+      // disable gravity while air dodging
+      Gravity = K.GravityOff;
+
+      // cancel momentum and apply the initial force
+      Velocity = Vec.Zero;
+      Force += airDodge.Direction * K.AirDodge;
     }
 
-    void StartWavedash(Vec direction) {
-      var state = new AirDodge(direction, isOnGround: true);
+    void AirDodge() {
+      var airDodge = State as AirDodge;
+      // decay air dodge each frame
+      Force += airDodge.Direction.Reverse() * K.AirDodgeDecay;
+    }
+
+    void EndAirDodge() {
+      // re-enable gravity
+      Gravity = K.GravityOn;
+    }
+
+    void WaveDash(Vec direction) {
+      // cancel momentum and apply the initial force
+      Velocity = Vec.Zero;
+      Force += direction * K.AirDodge;
+
+      // transition straight to wave land
+      WaveLand();
+    }
+
+    void WaveLand() {
+      var state = new WaveLand();
       SwitchState(state);
     }
 
@@ -391,8 +453,8 @@ namespace Clash.Player {
     }
 
     void SwitchState(State state) {
-      Log.Debug($"[Player] SwitchState({state})");
-      this.State = state;
+      Log.Debug($"[Player] SwitchState({State} => {state})");
+      State = state;
     }
   }
 }

@@ -13,7 +13,7 @@ namespace Clash.Input {
   namespace Ext {
     public static class DirectionExt {
       // -- queries --
-      public static Direction Invert(this Direction direction) {
+      public static Direction Reversed(this Direction direction) {
         switch (direction) {
           case Direction.Up:
             return Direction.Down;

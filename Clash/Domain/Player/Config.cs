@@ -2,8 +2,9 @@ using Clash.Maths;
 
 namespace Clash.Player {
   public static class Config {
-    public const float Gravity = 1.0f;
-    public const float Friction = 0.65f;
+    public const float GravityOn = 1.0f;
+    public const float GravityOff = 0.0f;
+    public const float Friction = 4.0f;
 
     // -- run/walk-
     public const float Run = 6.0f;
@@ -18,7 +19,7 @@ namespace Clash.Player {
 
 
     // -- jump --
-    public const int JumpWaitFrames = 8;
+    public const int JumpWaitFrames = 6;
     public const float Jump = 5.0f;
     public const float JumpShort = 3.0f;
     public const float FastFall = 6.0f;
@@ -28,8 +29,8 @@ namespace Clash.Player {
     public const float MaxAirSpeedX = 6.0f;
 
     // -- air dodge --
-    public const int AirDodgeFrames = 49;
-    public const float AirDodge = 5.0f;
+    public const float AirDodge = 9.0f;
+    public const float AirDodgeDecay = 0.5f;
 
     // -- size / hit detection --
     public static readonly Vec Offset = new Vec(0.1f, 0.0f);

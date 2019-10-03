@@ -47,7 +47,7 @@ namespace Clash.Input {
 
   // -- types --
   public enum StateA {
-    Inactive,
+    Idle,
     Switch,
     SwitchTap,
     Active,

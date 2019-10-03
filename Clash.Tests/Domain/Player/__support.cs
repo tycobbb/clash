@@ -66,6 +66,26 @@ namespace Clash.Player.Tests {
 
       return player;
     }
+
+    public static Player MakeAirDodge(Input.IStream stream) {
+      var player = MakeAirborne(stream);
+
+      player.Simulate(stream,
+        input: Snapshots.MakeShieldL(Input.StateB.Down)
+      );
+
+      return player;
+    }
+
+    public static Player MakeWaveDash(Input.IStream stream) {
+      var player = MakeJumpWait(stream);
+
+      player.Simulate(stream,
+        input: Snapshots.MakeShieldL(Input.StateB.Down)
+      );
+
+      return player;
+    }
   }
 
   public static class PlayerExt {
@@ -80,10 +100,10 @@ namespace Clash.Player.Tests {
         player.State.Frame = frame;
       }
 
-      // simulate lifecycle
+      // simulate lifecycle with crude physics
       player.OnUpdate(stream);
-      player.OnPostSimulation(player.Velocity);
-      player.OnPreUpdate(player.Velocity);
+      player.OnPostSimulation(player.Velocity + player.Force);
+      player.OnPreUpdate(player.Velocity + player.Force);
     }
   }
 }

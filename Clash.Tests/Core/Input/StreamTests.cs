@@ -22,11 +22,11 @@ namespace Clash.Input.Tests {
     [Test]
     public void ItRemainsInactiveWhileTheStickIsNeutral() {
       var source = Substitute.For<ISource>();
-      var stream = new Stream(source, Snapshots.MakeMove(StateA.Inactive));
+      var stream = new Stream(source, Snapshots.MakeMove(StateA.Idle));
 
       stream.OnUpdate(1.0f);
       var move = stream.GetCurrent().Move;
-      Assert.That(move.State, Is.EqualTo(StateA.Inactive));
+      Assert.That(move.State, Is.EqualTo(StateA.Idle));
     }
 
     [Test]
@@ -37,7 +37,7 @@ namespace Clash.Input.Tests {
 
       stream.OnUpdate(1.0f);
       var move = stream.GetCurrent().Move;
-      Assert.That(move.State, Is.EqualTo(StateA.Inactive));
+      Assert.That(move.State, Is.EqualTo(StateA.Idle));
     }
 
     [Test]
@@ -63,7 +63,7 @@ namespace Clash.Input.Tests {
 
     [Test]
     public void ItBecomesATapIfTheStickHitsTheEdgeOfTheStickboxQuickly(
-      [Values(StateA.Inactive, StateA.Unknown)] StateA initial
+      [Values(StateA.Idle, StateA.Unknown)] StateA initial
     ) {
       var source = Substitute.For<ISource>();
       var stream = new Stream(source, Snapshots.MakeMove(initial, x: 0.1f));
@@ -76,7 +76,7 @@ namespace Clash.Input.Tests {
 
     [Test]
     public void ItBecomesUnknownIfTheStickIsMovingQuicklyButHasntHitTheEdge(
-      [Values(StateA.Inactive, StateA.Unknown)] StateA initial
+      [Values(StateA.Idle, StateA.Unknown)] StateA initial
     ) {
       var source = Substitute.For<ISource>();
       var stream = new Stream(source, Snapshots.MakeMove(initial, x: 0.1f));
@@ -88,7 +88,7 @@ namespace Clash.Input.Tests {
     }
 
     public void ItBecomesASwitchIfTheStickIsMovingSlowly(
-      [Values(StateA.Inactive, StateA.Unknown)] StateA initial
+      [Values(StateA.Idle, StateA.Unknown)] StateA initial
     ) {
       var source = Substitute.For<ISource>();
       var stream = new Stream(source, Snapshots.MakeMove(initial, x: 0.1f));

@@ -11,5 +11,11 @@ namespace Clash.Maths {
     public static float Clamp(float val, float min, float max) {
       return Math.Min(Math.Max(val, min), max);
     }
+
+    public static Func<float, int> Sign = Math.Sign;
+
+    public static float Ceil(float val) {
+      return (float)Math.Ceiling(val);
+    }
   }
 }

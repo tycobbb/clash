@@ -88,8 +88,8 @@ namespace Clash.Input {
 
       // if the stick is neutral
       if (direction.IsNeutral()) {
-        if (state == StateA.Inactive || speed < K.IdleSpeed) {
-          state = StateA.Inactive;
+        if (state == StateA.Idle || speed < K.IdleSpeed) {
+          state = StateA.Idle;
         } else {
           state = StateA.Unknown;
         }
@@ -117,8 +117,8 @@ namespace Clash.Input {
         }
       }
 
-      if (state == StateA.Switch || state == StateA.SwitchTap) {
-        Log.Verbose($"[Input.Stream] SwitchDirection(dir: {direction}, state: {state})");
+      if (state != prevMove.State) {
+        Log.Verbose($"[Input.Stream] SwitchState({prevMove.State} => {state}, speed: {speed}, mag: {mag})");
       }
 
       return new Analog(state, direction, pos, raw);
@@ -135,17 +135,6 @@ namespace Clash.Input {
       }
 
       return new Button(state);
-    }
-
-    // -- queries/helpers
-    public static Direction DirectionFromVec(Vec v) {
-      if (v.X == 0.0f && v.Y == 0.0f) {
-        return Direction.Neutral;
-      } else if (Mathf.Abs(v.X) > Mathf.Abs(v.Y)) {
-        return v.X > 0.0f ? Direction.Right : Direction.Left;
-      } else {
-        return v.Y > 0.0f ? Direction.Up : Direction.Down;
-      }
     }
   }
 }

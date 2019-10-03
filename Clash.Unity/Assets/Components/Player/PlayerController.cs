@@ -20,8 +20,6 @@ public sealed class PlayerController: MonoBehaviour {
     // set constants
     var body = Body();
     body.freezeRotation = true;
-    body.gravityScale = K.Gravity;
-    body.sharedMaterial.friction = K.Friction;
 
     // size colliders
     var collider = Collider();
@@ -37,18 +35,37 @@ public sealed class PlayerController: MonoBehaviour {
     // set initial state
     var nContacts = body.GetContacts(new Collider2D[0]);
     player = new Player(isOnGround: nContacts != 0);
+
+    SyncEntityState();
   }
 
   public void FixedUpdate() {
     var body = Body();
+    body.sharedMaterial.friction = K.Friction;
 
     // sync body to entity and run update
     player.OnPreUpdate(body.velocity.ToDomain());
     player.OnUpdate(inputs);
+    SyncEntityState();
 
-    // sync entity back to game object
-    transform.localEulerAngles = Vector3.up * ((player.IsFacingLeft) ? 180.0f : 0.0f);
+    // run post-simulation
+    player.OnPostSimulation(body.velocity.ToDomain());
+    SyncEntityState();
+  }
 
+  public void OnCollisionEnter2D(Collision2D _) {
+    // TODO: pass collision information into domain
+    player.OnCollide();
+  }
+
+  // -- commands --
+  private void SyncEntityState() {
+    var body = Body();
+
+    // sync physics constants
+    body.gravityScale = player.Gravity;
+
+    // sync physics state
     var newV = player.Velocity.ToNative();
     if (!body.velocity.Equals(newV)) {
       body.velocity = newV;
@@ -59,19 +76,8 @@ public sealed class PlayerController: MonoBehaviour {
       body.AddForce(newF, ForceMode2D.Impulse);
     }
 
-    // run post-simulation
-    player.OnPostSimulation(body.velocity.ToDomain());
-
-    // sync entity back to game object
-    newV = player.Velocity.ToNative();
-    if (!body.velocity.Equals(newV)) {
-      body.velocity = newV;
-    }
-  }
-
-  public void OnCollisionEnter2D(Collision2D _) {
-    // TODO: pass collision information into domain
-    player.OnCollide();
+    // apply visual transforms
+    transform.localEulerAngles = Vector3.up * (player.IsFacingLeft ? 180.0f : 0.0f);
   }
 
   // -- queries --

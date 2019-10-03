@@ -1,33 +1,18 @@
 using Clash.Maths;
 
 namespace Clash.Player {
-  // -- names --
-  public enum StateName {
-    Idle,
-    Walk,
-    Dash,
-    Run,
-    Pivot,
-    Skid,
-    JumpWait,
-    Airborne,
-    AirDodge
-  }
-
   // -- states --
   public sealed class Idle: State {
-    public Idle() : base(StateName.Idle) { }
   }
 
   // -- states/move
   public sealed class Walk: State {
-    public Walk() : base(StateName.Walk) { }
   }
 
   public sealed class Dash: State {
     public readonly Input.Direction Direction;
 
-    public Dash(Input.Direction direction) : base(StateName.Dash) {
+    public Dash(Input.Direction direction) {
       Direction = direction;
     }
   }
@@ -35,7 +20,7 @@ namespace Clash.Player {
   public sealed class Run: State {
     public readonly Input.Direction Direction;
 
-    public Run(Input.Direction direction) : base(StateName.Run) {
+    public Run(Input.Direction direction) {
       Direction = direction;
     }
   }
@@ -43,20 +28,19 @@ namespace Clash.Player {
   public sealed class Pivot: State {
     public readonly Input.Direction Direction;
 
-    public Pivot(Input.Direction direction) : base(StateName.Pivot) {
+    public Pivot(Input.Direction direction) {
       Direction = direction;
     }
   }
 
   public sealed class Skid: State {
-    public Skid() : base(StateName.Skid) { }
   }
 
   // -- states/jump
   public sealed class JumpWait: State {
     public bool IsShort;
 
-    public JumpWait(bool isShort) : base(StateName.JumpWait) {
+    public JumpWait(bool isShort) {
       IsShort = isShort;
     }
   }
@@ -64,18 +48,19 @@ namespace Clash.Player {
   public sealed class Airborne: State {
     public bool IsFalling;
 
-    public Airborne(bool isFalling) : base(StateName.Airborne) {
+    public Airborne(bool isFalling) {
       IsFalling = isFalling;
     }
   }
 
   public sealed class AirDodge: State {
     public Vec Direction;
-    public bool IsOnGround;
 
-    public AirDodge(Vec direction, bool isOnGround = default) : base(StateName.AirDodge) {
+    public AirDodge(Vec direction) {
       Direction = direction;
-      IsOnGround = isOnGround;
     }
+  }
+
+  public sealed class WaveLand: State {
   }
 }

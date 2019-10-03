@@ -39,6 +39,15 @@ namespace Clash.Maths {
       );
     }
 
+    // -- queries --
+    public float Mag() {
+      return Mathf.Hypot(X, Y);
+    }
+
+    public Vec Reverse() {
+      return new Vec(-X, -Y);
+    }
+
     public Vec Normalize() {
       var mag = Mag();
 
@@ -47,11 +56,6 @@ namespace Clash.Maths {
       } else {
         return this / mag;
       }
-    }
-
-    // -- queries --
-    public float Mag() {
-      return Mathf.Hypot(X, Y);
     }
 
     // -- factories --

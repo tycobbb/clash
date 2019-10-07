@@ -80,6 +80,14 @@ namespace Clash.Input.Tests {
       );
     }
 
+    public static Snapshot MakeShieldR(
+      StateB state = StateB.Active
+    ) {
+      return Make(
+        shieldR: new Button(state)
+      );
+    }
+
     // -- factories/components
     public static Analog MakeAnalog(
       StateA state = default,

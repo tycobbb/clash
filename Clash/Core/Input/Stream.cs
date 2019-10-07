@@ -6,6 +6,7 @@ namespace Clash.Input {
 
   // -- interfaces --
   public interface IStream {
+    Snapshot Get(uint offset);
     Snapshot GetCurrent();
   }
 
@@ -19,22 +20,27 @@ namespace Clash.Input {
     private readonly ISource Source;
 
     // -- properties --
-    private Snapshot current;
+    private readonly Buffer buffer;
 
     // -- lifetime --
     public Stream(ISource source, Snapshot initial = default) {
       Source = source;
-      current = initial;
+      buffer = new Buffer(10);
+      buffer.Add(initial);
     }
 
     // -- IStream --
+    public Snapshot Get(uint offset) {
+      return buffer[offset];
+    }
+
     public Snapshot GetCurrent() {
-      return current;
+      return Get(0);
     }
 
     // -- IMutableStream --
     public void OnUpdate(float time) {
-      current = CaptureSnapshot(time);
+      buffer.Add(CaptureSnapshot(time));
     }
 
     // -- queries --
@@ -50,6 +56,7 @@ namespace Clash.Input {
     }
 
     private Analog CaptureMove(float time) {
+      var current = GetCurrent();
       var prevTime = current.Time;
       var prevMove = current.Move;
 

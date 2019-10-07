@@ -35,7 +35,20 @@ namespace Clash.Player {
     }
 
     public void OnUpdate(Input.IStream inputs) {
-      // handle per-state events
+      /*
+        open questions:
+        - how to deal with walk? should non-walk states only transition to walk when
+          the stick state is a horizontal (non-tap) switch, e.g. dash?
+        - how best to share code between various states? probably helpers.
+        - unlike other actions, airdodge has an awkward trio of commands. (Start|End)?AirDodge.
+          can/should this be simplifed/renamed?
+        - where to draw the conceptual line between what belongs in an event handler
+          for a state (void On<State>(...)) vs. the action for that state (void <State>())? i
+          think the waters are muddied by states whose actions can fire and forget the
+          transition (FullJump, WaveDash) vs. states that apply physics every frame (AirDodge, Walk).
+      */
+
+      // delegate to per-state event handler
       switch (State) {
         case Idle _:
           OnIdle(inputs); break;
@@ -56,7 +69,7 @@ namespace Clash.Player {
         case AirDodge _:
           OnAirDodge(); break;
         case WaveLand _:
-          OnWaveLand(); break;
+          OnWaveLand(inputs); break;
       }
     }
 
@@ -65,7 +78,7 @@ namespace Clash.Player {
       Force = Vec.Zero;
       Velocity = new Vec(v.X, v.Y);
 
-      // handle per-state updates
+      // delegate to per-state event handler
       switch (State) {
         case Dash _:
           OnDashLate(); break;
@@ -77,6 +90,7 @@ namespace Clash.Player {
     }
 
     public void OnCollide() {
+      // delegate to per-state event handler
       switch (State) {
         case Airborne a:
           OnAirborneCollide(a); break;
@@ -308,8 +322,22 @@ namespace Clash.Player {
       WaveLand();
     }
 
-    void OnWaveLand() {
-      if (Velocity.X == 0.0f) {
+    void OnWaveLand(Input.IStream inputs) {
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
+
+      // check for jumps
+      if (input.JumpA.IsDown()) {
+        FullJump();
+      } else if (input.JumpB.IsDown()) {
+        ShortJump();
+      }
+      // dash on tap
+      else if (DidTap(stick, Input.Direction.Horizontal)) {
+        Dash(stick.Direction, stick.Position.X);
+      }
+      // otherwise, idle if velocity drops to 0
+      else if (Velocity.X == 0.0f) {
         Idle();
       }
     }

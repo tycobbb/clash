@@ -35,21 +35,6 @@ namespace Clash.Player {
     }
 
     public void OnUpdate(Input.IStream inputs) {
-      var input = inputs.GetCurrent();
-
-      // check for physics-based state changes
-      if (State is Airborne && Velocity.Y <= 0.0f) {
-        Fall();
-      }
-
-      // handle button inputs
-      // TODO: handle these in per-state event handlers
-      if (input.JumpA.IsDown()) {
-        OnFullJumpDown();
-      } else if (input.JumpB.IsDown()) {
-        OnShortJumpDown();
-      }
-
       // handle per-state events
       switch (State) {
         case Idle _:
@@ -102,9 +87,14 @@ namespace Clash.Player {
 
     // -- events/neutral
     void OnIdle(Input.IStream inputs) {
-      var stick = inputs.GetCurrent().Move;
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
 
-      if (DidTap(stick, Input.Direction.Horizontal)) {
+      if (input.JumpA.IsDown()) {
+        FullJump();
+      } else if (input.JumpB.IsDown()) {
+        ShortJump();
+      } else if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.X);
       } else if (stick.Position.X != 0.0f) {
         Walk(stick.Direction, stick.Position.X);
@@ -113,11 +103,21 @@ namespace Clash.Player {
 
     // -- events/move
     void OnWalk(Input.IStream inputs) {
-      var stick = inputs.GetCurrent().Move;
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
 
-      if (DidTap(stick, Input.Direction.Horizontal)) {
+      // check for jumps
+      if (input.JumpA.IsDown()) {
+        FullJump();
+      } else if (input.JumpB.IsDown()) {
+        ShortJump();
+      }
+      // dash on tap
+      else if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.X);
-      } else if (stick.Position.X != 0.0f) {
+      }
+      // walk/idle on any other stick input
+      else if (stick.Position.X != 0.0f) {
         Walk(stick.Direction, stick.Position.X);
       } else {
         Idle();
@@ -125,13 +125,20 @@ namespace Clash.Player {
     }
 
     void OnDash(Dash dash, Input.IStream inputs) {
-      var stick = inputs.GetCurrent().Move;
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
 
-      // check for a dash back
-      if (DidTap(stick, dash.Direction.Reversed())) {
+      // check for jumps
+      if (input.JumpA.IsDown()) {
+        FullJump();
+      } else if (input.JumpB.IsDown()) {
+        ShortJump();
+      }
+      // dash back if tapping the opposite direction
+      else if (DidTap(stick, dash.Direction.Reversed())) {
         Dash(stick.Direction, stick.Position.X);
       }
-      // this dash is incomplete, so keep dashing
+      // if this dash is incomplete, keep dashing
       else if (dash.Frame < K.DashFrames) {
         Dash(dash.Direction, stick.Position.X);
       }
@@ -148,72 +155,76 @@ namespace Clash.Player {
     }
 
     void OnRun(Run run, Input.IStream inputs) {
-      var stick = inputs.GetCurrent().Move;
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
 
-      // stay in run if it matches the current state
-      if (stick.Direction == run.Direction) {
+      // check for jumps
+      if (input.JumpA.IsDown()) {
+        FullJump();
+      } else if (input.JumpB.IsDown()) {
+        ShortJump();
+      }
+      // stay in run if stick direction is the same
+      else if (stick.Direction == run.Direction) {
         Run(run.Direction);
-      } else if (stick.Direction == run.Direction.Reversed()) {
+      }
+      // pivot if the stick direction is opposite the run direction
+      else if (stick.Direction == run.Direction.Reversed()) {
         Pivot(stick.Direction);
-      } else {
+      }
+      // otherwise stop running
+      else {
         Skid();
       }
     }
 
     void OnPivot(Pivot pivot, Input.IStream inputs) {
-      if (pivot.Frame < K.RunPivotFrames) {
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
+
+      // check for jumps
+      if (input.JumpA.IsDown()) {
+        FullJump();
+      } else if (input.JumpB.IsDown()) {
+        ShortJump();
+      }
+      // don't do anything else until pivot finishes
+      else if (pivot.Frame < K.RunPivotFrames) {
         return;
       }
-
-      var stick = inputs.GetCurrent().Move;
-      if (stick.Direction == pivot.Direction) {
+      // start running if holding pivot direction
+      else if (stick.Direction == pivot.Direction) {
         Run(pivot.Direction);
-      } else {
+      }
+      // otherwise just stop
+      else {
         Idle();
       }
     }
 
     void OnSkid(Input.IStream inputs) {
-      var stick = inputs.GetCurrent().Move;
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
 
-      if (DidTap(stick, Input.Direction.Horizontal)) {
+      // check for jumps
+      if (input.JumpA.IsDown()) {
+        FullJump();
+      } else if (input.JumpB.IsDown()) {
+        ShortJump();
+      }
+      // dash on tap
+      else if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.X);
-      } else if (stick.Position.X != 0.0f) {
+      }
+      // walk/idle on any other stick input
+      else if (stick.Position.X != 0.0f) {
         Walk(stick.Direction, stick.Position.X);
-      } else if (Velocity.X == 0.0f) {
+      } else {
         Idle();
       }
     }
 
     // -- events/jump
-    void OnFullJumpDown() {
-      if (State is JumpWait || State is Airborne) {
-        return;
-      }
-
-      FullJump();
-    }
-
-    void OnShortJumpDown() {
-      if (State is JumpWait || State is Airborne) {
-        return;
-      }
-
-      ShortJump();
-    }
-
-    void OnShieldDown(Input.IStream inputs) {
-      var stick = inputs.GetCurrent().Move;
-      var direction = stick.Position.Normalize();
-
-      switch (State) {
-        case JumpWait _:
-          WaveDash(direction); break;
-        case Airborne _:
-          StartAirDodge(direction); break;
-      }
-    }
-
     void OnJumpWait(JumpWait jump, Input.IStream inputs) {
       var input = inputs.GetCurrent();
 
@@ -240,8 +251,13 @@ namespace Clash.Player {
       // add air control
       Drift(stick.Position.X);
 
+      // fall if moving downwards
+      if (Velocity.Y <= 0.0f) {
+        Fall();
+      }
+
       // fastfall on a downwards tap
-      if (airborne?.IsFalling == true && DidTap(stick, Input.Direction.Down)) {
+      if (airborne.IsFalling && DidTap(stick, Input.Direction.Down)) {
         FastFall();
       }
 

@@ -1,4 +1,5 @@
 using Clash.Maths;
+using Clash.Ext;
 using Clash.Input.Ext;
 
 namespace Clash.Player {
@@ -104,13 +105,16 @@ namespace Clash.Player {
       var input = inputs.GetCurrent();
       var stick = input.Move;
 
-      if (input.JumpA.IsDown()) {
-        FullJump();
-      } else if (input.JumpB.IsDown()) {
-        ShortJump();
-      } else if (DidTap(stick, Input.Direction.Horizontal)) {
+      // check for jumps/wd
+      if (TryJumpInputs(inputs)) {
+        return;
+      }
+      // dash on tap
+      else if (DidTap(stick, Input.Direction.Horizontal)) {
         Dash(stick.Direction, stick.Position.X);
-      } else if (stick.Position.X != 0.0f) {
+      }
+      // otherwise transition to walk
+      else if (stick.Position.X != 0.0f) {
         Walk(stick.Direction, stick.Position.X);
       }
     }
@@ -120,11 +124,9 @@ namespace Clash.Player {
       var input = inputs.GetCurrent();
       var stick = input.Move;
 
-      // check for jumps
-      if (input.JumpA.IsDown()) {
-        FullJump();
-      } else if (input.JumpB.IsDown()) {
-        ShortJump();
+      // check for jumps/wd
+      if (TryJumpInputs(inputs)) {
+        return;
       }
       // dash on tap
       else if (DidTap(stick, Input.Direction.Horizontal)) {
@@ -142,11 +144,9 @@ namespace Clash.Player {
       var input = inputs.GetCurrent();
       var stick = input.Move;
 
-      // check for jumps
-      if (input.JumpA.IsDown()) {
-        FullJump();
-      } else if (input.JumpB.IsDown()) {
-        ShortJump();
+      // check for jumps/wd
+      if (TryJumpInputs(inputs)) {
+        return;
       }
       // dash back if tapping the opposite direction
       else if (DidTap(stick, dash.Direction.Reversed())) {
@@ -172,11 +172,9 @@ namespace Clash.Player {
       var input = inputs.GetCurrent();
       var stick = input.Move;
 
-      // check for jumps
-      if (input.JumpA.IsDown()) {
-        FullJump();
-      } else if (input.JumpB.IsDown()) {
-        ShortJump();
+      // check for jumps/wd
+      if (TryJumpInputs(inputs)) {
+        return;
       }
       // stay in run if stick direction is the same
       else if (stick.Direction == run.Direction) {
@@ -196,11 +194,9 @@ namespace Clash.Player {
       var input = inputs.GetCurrent();
       var stick = input.Move;
 
-      // check for jumps
-      if (input.JumpA.IsDown()) {
-        FullJump();
-      } else if (input.JumpB.IsDown()) {
-        ShortJump();
+      // check for jumps/wd
+      if (TryJumpInputs(inputs)) {
+        return;
       }
       // don't do anything else until pivot finishes
       else if (pivot.Frame < K.RunPivotFrames) {
@@ -220,11 +216,9 @@ namespace Clash.Player {
       var input = inputs.GetCurrent();
       var stick = input.Move;
 
-      // check for jumps
-      if (input.JumpA.IsDown()) {
-        FullJump();
-      } else if (input.JumpB.IsDown()) {
-        ShortJump();
+      // check for jumps/wd
+      if (TryJumpInputs(inputs)) {
+        return;
       }
       // dash on tap
       else if (DidTap(stick, Input.Direction.Horizontal)) {
@@ -241,6 +235,7 @@ namespace Clash.Player {
     // -- events/jump
     void OnJumpWait(JumpWait jump, Input.IStream inputs) {
       var input = inputs.GetCurrent();
+      var stick = input.Move;
 
       // switch to short jump if button is released within the frame window
       if (!jump.IsShort && !input.JumpA.IsActive()) {
@@ -253,7 +248,6 @@ namespace Clash.Player {
       }
       // otherwise wavedash if shield is pressed
       else if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
-        var stick = input.Move;
         WaveDash(stick.Position.Normalize());
       }
     }
@@ -324,7 +318,6 @@ namespace Clash.Player {
 
     void OnWaveLand(Input.IStream inputs) {
       var input = inputs.GetCurrent();
-      var stick = input.Move;
 
       // check for jumps
       if (input.JumpA.IsDown()) {
@@ -332,14 +325,138 @@ namespace Clash.Player {
       } else if (input.JumpB.IsDown()) {
         ShortJump();
       }
-      // dash on tap
-      else if (DidTap(stick, Input.Direction.Horizontal)) {
-        Dash(stick.Direction, stick.Position.X);
-      }
       // otherwise, idle if velocity drops to 0
       else if (Velocity.X == 0.0f) {
         Idle();
       }
+    }
+
+    // -- events/inputs
+    private enum CommandState {
+      Unknown,
+      Possible,
+      Recognized,
+      Failed,
+    }
+
+    private struct WaveDashCommand {
+      public CommandState State;
+      public bool DidPressJump;
+      public bool DidPressShield;
+      public int WaitFrames;
+    }
+
+    private WaveDashCommand WaveDashCmd;
+    private CommandState FullJumpCmd;
+    private CommandState ShortJumpCmd;
+
+    private void ResetJumpStates() {
+      WaveDashCmd.State = CommandState.Unknown;
+      WaveDashCmd.DidPressJump = false;
+      WaveDashCmd.DidPressShield = false;
+      WaveDashCmd.WaitFrames = 0;
+
+      FullJumpCmd = CommandState.Unknown;
+      ShortJumpCmd = CommandState.Unknown;
+    }
+
+    private bool TryJumpInputs(Input.IStream inputs) {
+      var input = inputs.GetCurrent();
+      var stick = input.Move;
+
+
+      // check for wavedash, jump and buffered shield
+      // if (input.JumpA.IsDown() || input.JumpB.IsDown()) {
+      //   foreach (int frame in 0.To(2)) {
+      //     var buffered = inputs.Get((uint)frame);
+      //     if (buffered.ShieldL.IsDown() || buffered.ShieldR.IsDown()) {
+      //       WaveDash(stick.Position.Normalize());
+      //       return true;
+      //     }
+      //   }
+      // }
+
+      // // check for wavedash, shield and buffered jump
+      // if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
+      //   foreach (int frame in 0.To(2)) {
+      //     var buffered = inputs.Get((uint)frame);
+      //     if (buffered.JumpA.IsDown() || buffered.JumpB.IsDown()) {
+      //       WaveDash(stick.Position.Normalize());
+      //       return true;
+      //     }
+      //   }
+      // }
+
+      var didRecognize = false;
+
+      if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.WaitFrames > 0) {
+        WaveDashCmd.WaitFrames--;
+      }
+
+      // check for jumps
+      if (input.JumpA.IsDown()) {
+        FullJumpCmd = CommandState.Recognized;
+        didRecognize = true;
+
+        if (WaveDashCmd.State == CommandState.Unknown) {
+          WaveDashCmd.State = CommandState.Possible;
+          WaveDashCmd.DidPressJump = true;
+          WaveDashCmd.WaitFrames = 1;
+        } else if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.DidPressShield) {
+          ResetJumpStates();
+          WaveDash(stick.Position.Normalize());
+        } else if (WaveDashCmd.State == CommandState.Failed) {
+          ResetJumpStates();
+          FullJump();
+        }
+      }
+
+      if (input.JumpB.IsDown()) {
+        didRecognize = true;
+        ShortJumpCmd = CommandState.Recognized;
+
+        if (WaveDashCmd.State == CommandState.Unknown) {
+          WaveDashCmd.State = CommandState.Possible;
+          WaveDashCmd.DidPressJump = true;
+          WaveDashCmd.WaitFrames = 1;
+        } else if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.DidPressShield) {
+          ResetJumpStates();
+          WaveDash(stick.Position.Normalize());
+        } else if (WaveDashCmd.State == CommandState.Failed) {
+          ResetJumpStates();
+          ShortJump();
+        }
+      }
+
+      if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
+        didRecognize = true;
+
+        if (WaveDashCmd.State == CommandState.Unknown) {
+          WaveDashCmd.State = CommandState.Possible;
+          WaveDashCmd.DidPressShield = true;
+          WaveDashCmd.WaitFrames = 1;
+        } else if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.DidPressJump) {
+          ResetJumpStates();
+          WaveDash(stick.Position.Normalize());
+        }
+      }
+
+      if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.WaitFrames <= 0) {
+        WaveDashCmd.State = CommandState.Failed;
+
+        if (FullJumpCmd == CommandState.Recognized) {
+          ResetJumpStates();
+          FullJump();
+          didRecognize = true;
+        } else if (ShortJumpCmd == CommandState.Failed) {
+          ResetJumpStates();
+          ShortJump();
+          didRecognize = true;
+        }
+      }
+
+      // otherwise, nothing fired
+      return didRecognize;
     }
 
     // -- events/helpers
@@ -449,6 +566,9 @@ namespace Clash.Player {
     }
 
     void WaveDash(Vec direction) {
+      // wavedashes are always grounded
+      direction.Y = 0.0f;
+
       // cancel momentum and apply the initial force
       Velocity = Vec.Zero;
       Force += direction * K.AirDodge;

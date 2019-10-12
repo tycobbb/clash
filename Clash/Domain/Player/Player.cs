@@ -1,8 +1,9 @@
+using System;
 using Clash.Maths;
-using Clash.Ext;
 using Clash.Input.Ext;
 
 namespace Clash.Player {
+  using Clash.Input;
   using K = Config;
 
   public sealed class Player {
@@ -19,6 +20,7 @@ namespace Clash.Player {
 
     // -- lifetime --
     public Player(bool isOnGround) {
+      ResetJumpStates();
       if (isOnGround) {
         State = new Idle();
       } else {
@@ -332,130 +334,120 @@ namespace Clash.Player {
     }
 
     // -- events/inputs
-    private enum CommandState {
-      Unknown,
-      Possible,
-      Recognized,
-      Failed,
+    private class WaveDashRecognizer: GestureRecognizer {
+      // -- properties --
+      private int frames;
+      private bool isJumpRecognized;
+      private bool isShieldRecognized;
+
+      // -- IGestureRecognizer --
+      public override void Reset() {
+        base.Reset();
+        frames = 0;
+        isJumpRecognized = false;
+        isShieldRecognized = false;
+      }
+
+      public override StateG OnInput(Gesture gesture, IStream inputs) {
+        var input = inputs.GetCurrent();
+
+        // tick frame window
+        if (frames > 0) {
+          frames--;
+        }
+
+        // update flags
+        if (!isJumpRecognized) {
+          isJumpRecognized = input.JumpA.IsDown() || input.JumpB.IsDown();
+        }
+
+        if (!isShieldRecognized) {
+          isShieldRecognized = input.ShieldL.IsDown() || input.ShieldR.IsDown();
+        }
+
+        // determine next state
+        var prev = gesture.State;
+        var next = StateG.Possible;
+
+        if (isJumpRecognized && isShieldRecognized) {
+          next = StateG.Satisfied;
+        } else if (isJumpRecognized || isShieldRecognized) {
+          next = StateG.Pending;
+        } else if (prev == StateG.Possible && frames == 0) {
+          next = StateG.Failed;
+        }
+
+        // set frame window on transition to pending
+        if (next == StateG.Pending && gesture.State != next) {
+          frames = K.WaveDashFrameWindow;
+        }
+
+        return next;
+      }
     }
 
-    private struct WaveDashCommand {
-      public CommandState State;
-      public bool DidPressJump;
-      public bool DidPressShield;
-      public int WaitFrames;
+    private sealed class ButtonRecognizer: GestureRecognizer {
+      // -- properties --
+      private readonly Func<Snapshot, Button> getButton;
+
+      // -- lifetime --
+      public ButtonRecognizer(Func<Snapshot, Button> getButton) {
+        this.getButton = getButton;
+      }
+
+      // -- IGestureRecognizer --
+      public override StateG OnInput(Gesture gesture, IStream inputs) {
+        var input = inputs.GetCurrent();
+
+        if (gesture.State == StateG.Satisfied || getButton(input).IsDown()) {
+          return StateG.Satisfied;
+        } else {
+          return StateG.Possible;
+        }
+      }
     }
 
-    private WaveDashCommand WaveDashCmd;
-    private CommandState FullJumpCmd;
-    private CommandState ShortJumpCmd;
+    private Gesture waveDashCmd;
+    private Gesture jumpACmd;
+    private Gesture jumpBCmd;
 
     private void ResetJumpStates() {
-      WaveDashCmd.State = CommandState.Unknown;
-      WaveDashCmd.DidPressJump = false;
-      WaveDashCmd.DidPressShield = false;
-      WaveDashCmd.WaitFrames = 0;
+      if (waveDashCmd == null) {
+        waveDashCmd = new Gesture(new WaveDashRecognizer());
+        jumpACmd = new Gesture(new ButtonRecognizer((input) => input.JumpA));
+        jumpBCmd = new Gesture(new ButtonRecognizer((input) => input.JumpB));
 
-      FullJumpCmd = CommandState.Unknown;
-      ShortJumpCmd = CommandState.Unknown;
+        waveDashCmd.AddNext(jumpACmd);
+        jumpACmd.AddNext(jumpBCmd);
+      }
+
+      waveDashCmd.Reset();
+      jumpACmd.Reset();
+      jumpBCmd.Reset();
     }
 
     private bool TryJumpInputs(Input.IStream inputs) {
       var input = inputs.GetCurrent();
       var stick = input.Move;
 
-
-      // check for wavedash, jump and buffered shield
-      // if (input.JumpA.IsDown() || input.JumpB.IsDown()) {
-      //   foreach (int frame in 0.To(2)) {
-      //     var buffered = inputs.Get((uint)frame);
-      //     if (buffered.ShieldL.IsDown() || buffered.ShieldR.IsDown()) {
-      //       WaveDash(stick.Position.Normalize());
-      //       return true;
-      //     }
-      //   }
-      // }
-
-      // // check for wavedash, shield and buffered jump
-      // if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
-      //   foreach (int frame in 0.To(2)) {
-      //     var buffered = inputs.Get((uint)frame);
-      //     if (buffered.JumpA.IsDown() || buffered.JumpB.IsDown()) {
-      //       WaveDash(stick.Position.Normalize());
-      //       return true;
-      //     }
-      //   }
-      // }
+      waveDashCmd.OnUpdate(inputs);
 
       var didRecognize = false;
-
-      if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.WaitFrames > 0) {
-        WaveDashCmd.WaitFrames--;
-      }
-
-      // check for jumps
-      if (input.JumpA.IsDown()) {
-        FullJumpCmd = CommandState.Recognized;
+      if (waveDashCmd.IsRecognized) {
         didRecognize = true;
-
-        if (WaveDashCmd.State == CommandState.Unknown) {
-          WaveDashCmd.State = CommandState.Possible;
-          WaveDashCmd.DidPressJump = true;
-          WaveDashCmd.WaitFrames = 1;
-        } else if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.DidPressShield) {
-          ResetJumpStates();
-          WaveDash(stick.Position.Normalize());
-        } else if (WaveDashCmd.State == CommandState.Failed) {
-          ResetJumpStates();
-          FullJump();
-        }
-      }
-
-      if (input.JumpB.IsDown()) {
+        WaveDash(stick.Position.Normalize());
+      } else if (jumpACmd.IsRecognized) {
         didRecognize = true;
-        ShortJumpCmd = CommandState.Recognized;
-
-        if (WaveDashCmd.State == CommandState.Unknown) {
-          WaveDashCmd.State = CommandState.Possible;
-          WaveDashCmd.DidPressJump = true;
-          WaveDashCmd.WaitFrames = 1;
-        } else if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.DidPressShield) {
-          ResetJumpStates();
-          WaveDash(stick.Position.Normalize());
-        } else if (WaveDashCmd.State == CommandState.Failed) {
-          ResetJumpStates();
-          ShortJump();
-        }
-      }
-
-      if (input.ShieldL.IsDown() || input.ShieldR.IsDown()) {
+        FullJump();
+      } else if (jumpBCmd.IsRecognized) {
         didRecognize = true;
-
-        if (WaveDashCmd.State == CommandState.Unknown) {
-          WaveDashCmd.State = CommandState.Possible;
-          WaveDashCmd.DidPressShield = true;
-          WaveDashCmd.WaitFrames = 1;
-        } else if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.DidPressJump) {
-          ResetJumpStates();
-          WaveDash(stick.Position.Normalize());
-        }
+        ShortJump();
       }
 
-      if (WaveDashCmd.State == CommandState.Possible && WaveDashCmd.WaitFrames <= 0) {
-        WaveDashCmd.State = CommandState.Failed;
-
-        if (FullJumpCmd == CommandState.Recognized) {
-          ResetJumpStates();
-          FullJump();
-          didRecognize = true;
-        } else if (ShortJumpCmd == CommandState.Failed) {
-          ResetJumpStates();
-          ShortJump();
-          didRecognize = true;
-        }
+      if (didRecognize) {
+        ResetJumpStates();
       }
 
-      // otherwise, nothing fired
       return didRecognize;
     }
 

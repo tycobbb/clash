@@ -32,6 +32,9 @@ namespace Clash.Player {
     public const float AirDodge = 12.0f;
     public const float AirDodgeDecay = 0.9f;
 
+    // -- wavedash --
+    public const int WaveDashFrameWindow = 1;
+
     // -- size / hit detection --
     public static readonly Vec Offset = new Vec(0.1f, 0.0f);
     public static readonly Vec Size = new Vec(1.0f, 1.6f);

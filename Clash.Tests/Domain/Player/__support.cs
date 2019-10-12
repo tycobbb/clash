@@ -26,7 +26,8 @@ namespace Clash.Player.Tests {
       var player = MakeDash(stream, x);
 
       player.Simulate(stream,
-        input: Snapshots.MakeTilt(x), frame: K.DashFrames
+        input: Snapshots.MakeTilt(x),
+        frame: K.DashFrames
       );
 
       return player;

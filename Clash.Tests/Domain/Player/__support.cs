@@ -46,8 +46,13 @@ namespace Clash.Player.Tests {
     public static Player MakeJumpWait(Input.IStream stream) {
       var player = MakeIdle();
 
+      var frame = player.State.Frame;
       player.Simulate(stream,
         input: Snapshots.MakeJumpA(Input.StateB.Down)
+      );
+
+      player.Simulate(stream,
+        frame: frame + K.WaveDashFrameWindow
       );
 
       return player;
@@ -91,10 +96,8 @@ namespace Clash.Player.Tests {
 
   public static class PlayerExt {
     public static void Simulate(this Player player, Input.IStream stream, Input.Snapshot? input = null, int frame = -1) {
-      // simulate input, if any
-      if (input != null) {
-        stream.GetCurrent().Returns(input.GetValueOrDefault());
-      }
+      // simulate input or an empty one
+      stream.GetCurrent().Returns(input.GetValueOrDefault());
 
       // set frame, if any
       if (frame != -1) {

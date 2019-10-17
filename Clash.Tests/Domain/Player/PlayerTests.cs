@@ -101,8 +101,13 @@ namespace Clash.Player.Tests {
       var player = Players.MakeIdle();
       var stream = Substitute.For<Input.IStream>();
 
+      var frame = player.State.Frame;
       player.Simulate(stream,
         input: Snapshots.MakeJumpA(Input.StateB.Down)
+      );
+
+      player.Simulate(stream,
+        frame: frame + K.WaveDashFrameWindow
       );
 
       Assert.That(player.State, Is.InstanceOf<JumpWait>());
@@ -141,8 +146,13 @@ namespace Clash.Player.Tests {
       var player = Players.MakeIdle();
       var stream = Substitute.For<Input.IStream>();
 
+      var frame = player.State.Frame;
       player.Simulate(stream,
         input: Snapshots.MakeJumpB(Input.StateB.Down)
+      );
+
+      player.Simulate(stream,
+        frame: frame + K.WaveDashFrameWindow
       );
 
       player.Simulate(stream,
@@ -155,7 +165,7 @@ namespace Clash.Player.Tests {
     }
 
     [Test]
-    public void ItAirdodgesWhenPressingShieldInAir() {
+    public void ItAirDodgesWhenPressingShieldInAir() {
       var stream = Substitute.For<Input.IStream>();
       var player = Players.MakeAirborne(stream);
 
@@ -168,7 +178,7 @@ namespace Clash.Player.Tests {
     }
 
     [Test]
-    public void ItFallsAfterAnAirdodge() {
+    public void ItFallsAfterAnAirDodge() {
       var stream = Substitute.For<Input.IStream>();
       var player = Players.MakeAirDodge(stream);
 

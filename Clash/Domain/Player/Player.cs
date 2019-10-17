@@ -1,30 +1,29 @@
-using System;
 using Clash.Maths;
 using Clash.Input.Ext;
 
 namespace Clash.Player {
-  using Clash.Input;
   using K = Config;
 
   public sealed class Player {
-    // -- physics --
+    // -- props --
+    // -- props/physics
     public Vec Velocity;
     public Vec Force;
     public float Gravity = K.GravityOn;
 
-    // -- state machine --
+    // -- props/state
     public State State { get; private set; }
-
-    // -- properties --
     public bool IsFacingLeft { get; private set; }
+
+    // -- props/controls
+    private readonly Controls.WaveDash waveDash = new Controls.WaveDash();
 
     // -- lifetime --
     public Player(bool isOnGround) {
-      ResetJumpStates();
       if (isOnGround) {
-        State = new Idle();
+        Idle();
       } else {
-        State = new Airborne(isFalling: true);
+        Fall();
       }
     }
 
@@ -108,7 +107,7 @@ namespace Clash.Player {
       var stick = input.Move;
 
       // check for jumps/wd
-      if (TryJumpInputs(inputs)) {
+      if (TryWaveDashActions(inputs)) {
         return;
       }
       // dash on tap
@@ -127,7 +126,7 @@ namespace Clash.Player {
       var stick = input.Move;
 
       // check for jumps/wd
-      if (TryJumpInputs(inputs)) {
+      if (TryWaveDashActions(inputs)) {
         return;
       }
       // dash on tap
@@ -147,7 +146,7 @@ namespace Clash.Player {
       var stick = input.Move;
 
       // check for jumps/wd
-      if (TryJumpInputs(inputs)) {
+      if (TryWaveDashActions(inputs)) {
         return;
       }
       // dash back if tapping the opposite direction
@@ -175,7 +174,7 @@ namespace Clash.Player {
       var stick = input.Move;
 
       // check for jumps/wd
-      if (TryJumpInputs(inputs)) {
+      if (TryWaveDashActions(inputs)) {
         return;
       }
       // stay in run if stick direction is the same
@@ -197,7 +196,7 @@ namespace Clash.Player {
       var stick = input.Move;
 
       // check for jumps/wd
-      if (TryJumpInputs(inputs)) {
+      if (TryWaveDashActions(inputs)) {
         return;
       }
       // don't do anything else until pivot finishes
@@ -219,7 +218,7 @@ namespace Clash.Player {
       var stick = input.Move;
 
       // check for jumps/wd
-      if (TryJumpInputs(inputs)) {
+      if (TryWaveDashActions(inputs)) {
         return;
       }
       // dash on tap
@@ -334,124 +333,28 @@ namespace Clash.Player {
     }
 
     // -- events/inputs
-    private class WaveDashRecognizer: GestureRecognizer {
-      // -- properties --
-      private int frames;
-      private bool isJumpRecognized;
-      private bool isShieldRecognized;
-
-      // -- IGestureRecognizer --
-      public override void Reset() {
-        base.Reset();
-        frames = 0;
-        isJumpRecognized = false;
-        isShieldRecognized = false;
-      }
-
-      public override StateG OnInput(Gesture gesture, IStream inputs) {
-        var input = inputs.GetCurrent();
-
-        // tick frame window
-        if (frames > 0) {
-          frames--;
-        }
-
-        // update flags
-        if (!isJumpRecognized) {
-          isJumpRecognized = input.JumpA.IsDown() || input.JumpB.IsDown();
-        }
-
-        if (!isShieldRecognized) {
-          isShieldRecognized = input.ShieldL.IsDown() || input.ShieldR.IsDown();
-        }
-
-        // determine next state
-        var prev = gesture.State;
-        var next = StateG.Possible;
-
-        if (isJumpRecognized && isShieldRecognized) {
-          next = StateG.Satisfied;
-        } else if (isJumpRecognized || isShieldRecognized) {
-          next = StateG.Pending;
-        } else if (prev == StateG.Possible && frames == 0) {
-          next = StateG.Failed;
-        }
-
-        // set frame window on transition to pending
-        if (next == StateG.Pending && gesture.State != next) {
-          frames = K.WaveDashFrameWindow;
-        }
-
-        return next;
-      }
-    }
-
-    private sealed class ButtonRecognizer: GestureRecognizer {
-      // -- properties --
-      private readonly Func<Snapshot, Button> getButton;
-
-      // -- lifetime --
-      public ButtonRecognizer(Func<Snapshot, Button> getButton) {
-        this.getButton = getButton;
-      }
-
-      // -- IGestureRecognizer --
-      public override StateG OnInput(Gesture gesture, IStream inputs) {
-        var input = inputs.GetCurrent();
-
-        if (gesture.State == StateG.Satisfied || getButton(input).IsDown()) {
-          return StateG.Satisfied;
-        } else {
-          return StateG.Possible;
-        }
-      }
-    }
-
-    private Gesture waveDashCmd;
-    private Gesture jumpACmd;
-    private Gesture jumpBCmd;
-
-    private void ResetJumpStates() {
-      if (waveDashCmd == null) {
-        waveDashCmd = new Gesture(new WaveDashRecognizer());
-        jumpACmd = new Gesture(new ButtonRecognizer((input) => input.JumpA));
-        jumpBCmd = new Gesture(new ButtonRecognizer((input) => input.JumpB));
-
-        waveDashCmd.AddNext(jumpACmd);
-        jumpACmd.AddNext(jumpBCmd);
-      }
-
-      waveDashCmd.Reset();
-      jumpACmd.Reset();
-      jumpBCmd.Reset();
-    }
-
-    private bool TryJumpInputs(Input.IStream inputs) {
+    private bool TryWaveDashActions(Input.IStream inputs) {
       var input = inputs.GetCurrent();
       var stick = input.Move;
 
-      waveDashCmd.OnUpdate(inputs);
+      // handle this frame's input
+      // TODO: we should pass around a session-wide frame
+      waveDash.OnUpdate(inputs, State.Frame);
 
-      var didRecognize = false;
-      if (waveDashCmd.IsRecognized) {
-        didRecognize = true;
-        WaveDash(stick.Position.Normalize());
-      } else if (jumpACmd.IsRecognized) {
-        didRecognize = true;
-        FullJump();
-      } else if (jumpBCmd.IsRecognized) {
-        didRecognize = true;
-        ShortJump();
+      // see if it recognized an action
+      var action = waveDash.Action;
+      switch (action) {
+        case Controls.ActionW.Wavedash:
+          WaveDash(stick.Position.Normalize()); break;
+        case Controls.ActionW.JumpA:
+          FullJump(); break;
+        case Controls.ActionW.JumpB:
+          ShortJump(); break;
       }
 
-      if (didRecognize) {
-        ResetJumpStates();
-      }
-
-      return didRecognize;
+      return waveDash.State != Controls.StateW.Possible;
     }
 
-    // -- events/helpers
     private bool DidTap(Input.Analog stick, Input.Direction direction) {
       return stick.DidTap() && stick.Direction.Intersects(direction);
     }
@@ -611,6 +514,9 @@ namespace Clash.Player {
     void SwitchState(State state) {
       Log.Debug($"[Player] SwitchState({State} => {state})");
       State = state;
+
+      // reset stateful controls
+      waveDash.Reset();
     }
   }
 }
